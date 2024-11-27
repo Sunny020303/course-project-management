@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
-import supabase from "../supabaseClient";
+import supabase from "../services/supabaseClient";
 import {
   List,
   ListItem,

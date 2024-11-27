@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import supabase from "../supabaseClient";
+import supabase from "../services/supabaseClient";
 import { Typography, Container, Button, Box } from "@mui/material";
 
 function TopicDetails() {
