@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import supabase from "../supabaseClient";
+import {
+  List,
+  ListItem,
+  ListItemText,
+  Typography,
+  Container,
+} from "@mui/material";
 
 function TopicList() {
+  const { classId } = useParams(); // Get classId from URL
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchTopics = async () => {
-      const { data, error } = await supabase.from("topics").select("*");
+      const { data, error } = await supabase
+        .from("topics")
+        .select("*")
+        .eq("class_id", classId);
 
       if (error) {
         console.error("Error fetching topics:", error);
@@ -19,23 +30,30 @@ function TopicList() {
     };
 
     fetchTopics();
-  }, []);
+  }, [classId]);
 
   return (
-    <div>
-      <h1>Danh sách đề tài</h1>
+    <Container maxWidth="md">
+      <Typography variant="h4" component="h1" gutterBottom>
+        Danh sách đề tài
+      </Typography>
       {loading ? (
-        <p>Loading...</p>
+        <Typography variant="body1">Loading...</Typography>
       ) : (
-        <ul>
+        <List>
           {topics.map((topic) => (
-            <li key={topic.id}>
-              <Link to={`/topics/${topic.id}`}>{topic.name}</Link>
-            </li>
+            <ListItem
+              key={topic.id}
+              component={Link}
+              to={`/topics/${topic.id}`}
+              button
+            >
+              <ListItemText primary={topic.name} />
+            </ListItem>
           ))}
-        </ul>
+        </List>
       )}
-    </div>
+    </Container>
   );
 }
 

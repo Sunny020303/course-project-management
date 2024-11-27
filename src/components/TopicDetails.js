@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import supabase from "../supabaseClient";
+import { Typography, Container, Button, Box } from "@mui/material";
 
 function TopicDetails() {
   const { id } = useParams();
@@ -56,14 +57,32 @@ function TopicDetails() {
   }
 
   return (
-    <div>
-      <h2>{topic.name}</h2>
-      <p>{topic.description}</p>
-      {!isRegistered && (
-        <Link to={`/topics/${topic.id}/register`}>Đăng ký đề tài</Link>
-      )}
-      <Link to="/">Quay lại danh sách đề tài</Link>
-    </div>
+    <Container maxWidth="md">
+      <Typography variant="h5" component="h2" gutterBottom>
+        {topic.name}
+      </Typography>
+      <Typography variant="body1" gutterBottom>
+        {topic.description}
+      </Typography>
+
+      <Box mt={2}>
+        {!isRegistered ? (
+          <Button
+            component={Link}
+            to={`/topics/${topic.id}/register`}
+            variant="contained"
+            color="primary"
+          >
+            Đăng ký đề tài
+          </Button>
+        ) : (
+          {}
+        )}
+        <Button component={Link} to="/" variant="outlined">
+          Quay lại danh sách đề tài
+        </Button>
+      </Box>
+    </Container>
   );
 }
 
