@@ -11,6 +11,7 @@ import Login from "./pages/task1/login";
 import Signup from "./pages/task1/signup";
 import Dashboard from "./pages/task1/dashboard";
 import TopicList from "./components/TopicList";
+import TopicDetails from "./components/TopicDetails";
 
 import React, { useState } from "react";
 const queryClient = new QueryClient({
@@ -39,6 +40,7 @@ function App() {
               <Route path="/dang-nhap" element={<Login />} />
               <Route path="/dang-ky" element={<Signup />} />
               <Route path="/topics" element={<TopicList />} />
+              <Route path="/topics/:id" element={<TopicDetails />} />
             </Routes>
           </Router>
         </div>
