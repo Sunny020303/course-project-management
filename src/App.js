@@ -7,14 +7,14 @@ import {
 } from "react-router-dom";
 import { ConfigProvider } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Login from "./pages/task1/login";
-import Signup from "./pages/task1/signup";
 import Dashboard from "./pages/task1/dashboard";
+import Auth from "./components/Auth";
 import ClassList from "./components/ClassList";
 import TopicList from "./components/TopicList";
 import TopicDetails from "./components/TopicDetails";
+import supabase from "./supabaseClient";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -24,11 +24,23 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const isLogin = false;
+  const [session, setSession] = useState(null);
 
-  /*if(!isLogin){
-    return <Navigate to="/dang-nhap" replace />
-  }*/
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+      }
+    );
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -38,8 +50,8 @@ function App() {
           <Router>
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route path="/dang-nhap" element={<Login />} />
-              <Route path="/dang-ky" element={<Signup />} />
+              <Route path="/login" element={<Auth type="login" />} />
+              <Route path="/register" element={<Auth type="register" />} />
               <Route path="/classes" element={<ClassList />} />
               <Route
                 path="/classes/:classId/topics"
