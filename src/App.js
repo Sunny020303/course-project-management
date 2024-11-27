@@ -1,12 +1,18 @@
-import './App.css';
-import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
+import "./App.css";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Navigate,
+} from "react-router-dom";
 import { ConfigProvider } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import Login from './pages/task1/login';
-import Signup from './pages/task1/signup';
-import Dashboard from './pages/task1/dashboard';
+import Login from "./pages/task1/login";
+import Signup from "./pages/task1/signup";
+import Dashboard from "./pages/task1/dashboard";
+import TopicList from "./components/TopicList";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -16,7 +22,6 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-
   const isLogin = false;
 
   /*if(!isLogin){
@@ -33,13 +38,12 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/dang-nhap" element={<Login />} />
               <Route path="/dang-ky" element={<Signup />} />
+              <Route path="/topics" element={<TopicList />} />
             </Routes>
           </Router>
         </div>
       </ConfigProvider>
-
     </QueryClientProvider>
-
   );
 }
 
