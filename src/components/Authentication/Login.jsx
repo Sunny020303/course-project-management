@@ -1,36 +1,27 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import supabase from "../../services/supabaseClient";
+import { useAuth } from "../../context/AuthContext";
 import { TextField, Button, Container, Typography, Box } from "@mui/material";
 import Header from "../Layout/Header";
 import Footer from "../Layout/Footer";
-import { login } from "../../services/authService";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { user, setUserInContext } = useAuth();
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => {
-      subscription.unsubscribe(); // Unsubscribe on unmount
-    };
-  }, []);
-
-  useEffect(() => {
+    // Redirect nếu đã đăng nhập
     if (user) {
-      navigate("/dashboard", { replace: true }); // Redirect and prevent going back
+      navigate("/classes", { replace: true });
     }
-  }, [user, navigate]);
+  }, [user]);
+
+  const { login } = useAuth();
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -40,6 +31,18 @@ function Login() {
     try {
       const { error } = await login(email, password);
       if (error) throw error;
+
+      // Get user data and set in context after successful login
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", email)
+        .single();
+      if (userError) throw userError;
+
+      setUserInContext(userData); // set user data in context
+
+      navigate("/classes");
     } catch (error) {
       setError(error.message);
     } finally {

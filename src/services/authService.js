@@ -19,7 +19,9 @@ export const register = async (
   password,
   fullName,
   role,
-  departmentId
+  departmentId,
+  studentCode,
+  lecturerCode
 ) => {
   try {
     const { user, error } = await supabase.auth.signUp({ email, password });
@@ -27,10 +29,13 @@ export const register = async (
 
     await supabase.from("users").insert({
       id: user.id,
-      email,
+      email: email,
       full_name: fullName,
       role,
       department_id: departmentId,
+      student_code: studentCode,
+      lecturer_code: lecturerCode,
+      created_by: user.id,
     });
 
     return { error: null };

@@ -1,21 +1,21 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import supabase from "../../services/supabaseClient";
+import { useAuth } from "../../context/AuthContext";
 import {
   TextField,
   Button,
   Container,
   Typography,
   Box,
-  Link,
   MenuItem,
   Select,
   InputLabel,
   FormControl,
+  Alert,
 } from "@mui/material";
 import Header from "../Layout/Header";
 import Footer from "../Layout/Footer";
-import { register } from "../../services/authService";
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -24,9 +24,20 @@ function Register() {
   const [role, setRole] = useState("student");
   const [department, setDepartment] = useState("");
   const [departments, setDepartments] = useState([]);
+  const [studentCode, setStudentCode] = useState("");
+  const [lecturerCode, setLecturerCode] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Redirect nếu đã đăng nhập
+    if (user) {
+      navigate("/classes", { replace: true });
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchDepartments = async () => {
@@ -41,6 +52,8 @@ function Register() {
     fetchDepartments();
   }, []);
 
+  const { register } = useAuth();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -52,7 +65,9 @@ function Register() {
         password,
         fullName,
         role,
-        department
+        department,
+        studentCode,
+        lecturerCode
       );
       if (error) throw error;
 
@@ -144,12 +159,31 @@ function Register() {
                 ))}
               </Select>
             </FormControl>
+            {role === "student" && (
+              <TextField
+                label="Mã sinh viên"
+                fullWidth
+                margin="normal"
+                value={studentCode}
+                onChange={(e) => setStudentCode(e.target.value)}
+              />
+            )}
+            {role === "lecturer" && (
+              <TextField
+                label="Mã giảng viên"
+                fullWidth
+                margin="normal"
+                value={lecturerCode}
+                onChange={(e) => setLecturerCode(e.target.value)}
+              />
+            )}
             <Button
               variant="contained"
               color="primary"
               fullWidth
               type="submit"
               disabled={loading}
+              sx={{ mt: 2 }}
             >
               {loading ? "Đang tải..." : "Đăng ký"}
             </Button>

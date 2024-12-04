@@ -8,17 +8,20 @@ import {
 import { ConfigProvider } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@mui/material/styles";
+import { AuthProvider } from "./context/AuthContext";
 import theme from "./theme";
-import Dashboard from "./pages/task1/dashboard";
-import CreateTopic from "./pages/task1/CreateTopic";
-import Login from "./components/Authentication/Login";
-import Register from "./components/Authentication/Register";
-import ClassList from "./components/Classes/ClassList";
-import TopicList from "./components/Topics/ClassTopics";
-import TopicDetails from "./components/Topics/TopicDetails";
 import supabase from "./services/supabaseClient";
-import Box from "@mui/material/Box";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
+import { CircularProgress, Box } from "@mui/material";
+
+const Login = lazy(() => import("./components/Authentication/Login"));
+const Register = lazy(() => import("./components/Authentication/Register"));
+const ClassList = lazy(() => import("./components/Classes/ClassList"));
+const ClassTopics = lazy(() => import("./components/Topics/ClassTopics"));
+const TopicDetails = lazy(() => import("./components/Topics/TopicDetails"));
+const Dashboard = lazy(() => import("./pages/task1/dashboard"));
+const CreateTopic = lazy(() => import("./pages/task1/CreateTopic"));
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -47,33 +50,51 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider theme={theme}>
-      <QueryClientProvider client={queryClient}>
-        <ConfigProvider>
-          <div className="App">
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-              }}
-            >
-              <Router>
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/createtopic" element={<CreateTopic />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/classes" element={<ClassList />} />
-                  <Route path="/topics" element={<TopicList />} />
-                  <Route path="/topics/:id" element={<TopicDetails />} />
-                </Routes>
-              </Router>
-            </Box>
-          </div>
-        </ConfigProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider theme={theme}>
+        <QueryClientProvider client={queryClient}>
+          <ConfigProvider>
+            <Router>
+              <Suspense
+                fallback={
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      height: "100vh",
+                    }}
+                  >
+                    <CircularProgress />
+                  </Box>
+                }
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    minHeight: "100vh",
+                  }}
+                >
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/createtopic" element={<CreateTopic />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/classes" element={<ClassList />} />
+                    <Route path="/classes/:id" element={<ClassTopics />} />
+                    <Route
+                      path="/topics/details/:id"
+                      element={<TopicDetails />}
+                    />
+                  </Routes>
+                </Box>
+              </Suspense>
+            </Router>
+          </ConfigProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 
