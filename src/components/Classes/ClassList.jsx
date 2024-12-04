@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import supabase from "../services/supabaseClient";
+import supabase from "../../services/supabaseClient";
 import {
   List,
   ListItem,
@@ -10,7 +10,6 @@ import {
   Grid,
   CircularProgress,
 } from "@mui/material";
-import ClassCard from "./ClassCard";
 
 function ClassList() {
   const [classes, setClasses] = useState([]);
@@ -38,13 +37,6 @@ function ClassList() {
       <Typography variant="h4" component="h1" gutterBottom>
         Danh sách lớp học
       </Typography>
-      <Grid container spacing={2}>
-        {classes.map((classItem) => (
-          <Grid item xs={12} sm={6} md={4} key={classItem.id}>
-            <ClassCard classItem={classItem} />
-          </Grid>
-        ))}
-      </Grid>
     </Container>
   );
 }

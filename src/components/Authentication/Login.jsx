@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import supabase from "../../services/supabaseClient";
 import { TextField, Button, Container, Typography, Box } from "@mui/material";
-import Header from "../Header";
-import Footer from "../Footer";
+import Header from "../Layout/Header";
+import Footer from "../Layout/Footer";
+import { login } from "../../services/authService";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -37,10 +38,7 @@ function Login() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await login(email, password);
       if (error) throw error;
     } catch (error) {
       setError(error.message);

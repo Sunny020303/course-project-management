@@ -13,8 +13,9 @@ import {
   InputLabel,
   FormControl,
 } from "@mui/material";
-import Header from "../Header";
-import Footer from "../Footer";
+import Header from "../Layout/Header";
+import Footer from "../Layout/Footer";
+import { register } from "../../services/authService";
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -46,15 +47,14 @@ function Register() {
     setError(null);
 
     try {
-      const { user, error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
-
-      await supabase.from("users").insert({
-        id: user.id,
-        full_name: fullName,
+      const { error } = await register(
+        email,
+        password,
+        fullName,
         role,
-        department_id: department,
-      });
+        department
+      );
+      if (error) throw error;
 
       navigate("/login", { replace: true });
     } catch (error) {
