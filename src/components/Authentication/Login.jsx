@@ -9,8 +9,6 @@ import {
   Box,
   Alert,
 } from "@mui/material";
-import Header from "../Layout/Header";
-import Footer from "../Layout/Footer";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -60,88 +58,84 @@ function Login() {
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <Header />
-      <Container
-        maxWidth="xs"
+    <Container
+      maxWidth="xs"
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        flexGrow: 1,
+        alignItems: "center",
+      }}
+    >
+      <Box
         sx={{
-          display: "flex",
-          justifyContent: "center",
-          flexGrow: 1,
-          alignItems: "center",
+          width: "100%",
+          maxWidth: 400,
+          padding: 4,
+          borderRadius: "8px",
+          boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
+          bgcolor: "white",
         }}
       >
-        <Box
-          sx={{
-            width: "100%",
-            maxWidth: 400,
-            padding: 4,
-            borderRadius: "8px",
-            boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
-            bgcolor: "white",
-          }}
+        <Typography
+          variant="h4"
+          align="center"
+          gutterBottom
+          sx={{ color: "primary.main" }}
         >
-          <Typography
-            variant="h4"
-            align="center"
-            gutterBottom
-            sx={{ color: "primary.main" }}
+          Đăng nhập
+        </Typography>
+        {showSuccessAlert && (
+          <Alert severity="success" sx={{ mb: 2 }}>
+            Đăng ký thành công!
+          </Alert>
+        )}
+        <form onSubmit={handleSubmit}>
+          <TextField
+            label="Địa chỉ Email"
+            variant="outlined"
+            fullWidth
+            margin="normal"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <TextField
+            label="Mật khẩu"
+            type="password"
+            variant="outlined"
+            fullWidth
+            margin="normal"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            type="submit"
+            disabled={loading}
+            sx={{ mt: 2 }}
           >
-            Đăng nhập
-          </Typography>
-          {showSuccessAlert && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Đăng ký thành công!
-            </Alert>
-          )}
-          <form onSubmit={handleSubmit}>
-            <TextField
-              label="Địa chỉ Email"
-              variant="outlined"
-              fullWidth
-              margin="normal"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <TextField
-              label="Mật khẩu"
-              type="password"
-              variant="outlined"
-              fullWidth
-              margin="normal"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              type="submit"
-              disabled={loading}
+            {loading ? "Đang tải..." : "Đăng nhập"}
+          </Button>
+          {error && (
+            <Typography
+              variant="body2"
+              color="error"
+              align="center"
               sx={{ mt: 2 }}
             >
-              {loading ? "Đang tải..." : "Đăng nhập"}
-            </Button>
-            {error && (
-              <Typography
-                variant="body2"
-                color="error"
-                align="center"
-                sx={{ mt: 2 }}
-              >
-                {error}
-              </Typography>
-            )}
-          </form>
-          <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-            Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
-          </Typography>
-        </Box>
-      </Container>
-      <Footer />
-    </Box>
+              {error}
+            </Typography>
+          )}
+        </form>
+        <Typography variant="body2" align="center" sx={{ mt: 2 }}>
+          Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
+        </Typography>
+      </Box>
+    </Container>
   );
 }
 

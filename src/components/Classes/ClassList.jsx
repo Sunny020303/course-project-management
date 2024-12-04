@@ -1,13 +1,9 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { getClassesByUser } from "../../services/classService";
 import { useAuth } from "../../context/AuthContext";
 import {
   Typography,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
   Box,
   Container,
   CircularProgress,
@@ -15,28 +11,31 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Button,
   TextField,
   InputAdornment,
   IconButton,
-  ListItemIcon,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import { Link as RouterLink } from "react-router-dom";
-import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
-import SchoolIcon from "@mui/icons-material/School";
-import Header from "../Layout/Header";
-import Footer from "../Layout/Footer";
+import ClassListItems from "./ClassListItems";
 
 function ClassList() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { classId } = useParams();
   const [classesBySemester, setClassesBySemester] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const { user } = useAuth();
-  const [expanded, setExpanded] = React.useState(false);
-  const navigate = useNavigate();
+  const [expanded, setExpanded] = useState(false);
+
+  const handleChange = (panel) => (event, isExpanded) => {
+    setExpanded(isExpanded ? panel : false);
+  };
+
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+  };
 
   const classesData = useMemo(async () => {
     return await getClassesByUser(user);
@@ -80,14 +79,6 @@ function ClassList() {
     fetchClasses();
   }, [classesData]);
 
-  const handleChange = (panel) => (event, isExpanded) => {
-    setExpanded(isExpanded ? panel : false);
-  };
-
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-  };
-
   // Hàm lọc danh sách lớp học
   const filteredClassesBySemester = useMemo(() => {
     return Object.entries(classesBySemester).reduce(
@@ -110,130 +101,55 @@ function ClassList() {
     );
   }, [classesBySemester, searchTerm]);
 
-  const formattedSemester = (semesterInt) => {
-    const year = String(semesterInt).slice(0, 4);
-    const semesterPart = String(semesterInt).slice(4);
-    const semesterName =
-      semesterPart === "3" ? "Học kỳ Hè" : `Học kỳ ${semesterPart}`;
-    return `${year} - ${semesterName}`;
-  };
-
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <Header />
-      <Container maxWidth="md" sx={{ flexGrow: 1, marginTop: 2 }}>
-        <Typography variant="h5" gutterBottom>
-          Danh sách lớp học
-        </Typography>
-        {loading ? (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100vh",
+    <Container maxWidth="md" sx={{ flexGrow: 1, marginTop: 2 }}>
+      <Typography variant="h5" gutterBottom>
+        Danh sách lớp học
+      </Typography>
+      {loading ? (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100vh",
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      ) : error ? (
+        <Alert severity="error">{error}</Alert>
+      ) : (
+        <>
+          <TextField
+            label="Tìm kiếm"
+            variant="outlined"
+            fullWidth
+            value={searchTerm}
+            onChange={handleSearchChange}
+            sx={{ mb: 2 }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton>
+                    <SearchIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
             }}
-          >
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Alert severity="error">{error}</Alert>
-        ) : (
-          <>
-            <TextField
-              label="Tìm kiếm"
-              variant="outlined"
-              fullWidth
-              value={searchTerm}
-              onChange={handleSearchChange}
-              sx={{ mb: 2 }}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton>
-                      <SearchIcon />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-            {Object.keys(filteredClassesBySemester).length === 0 && (
-              <Typography variant="body1" align="center" sx={{ mt: 2 }}>
-                Không có lớp học nào.
-              </Typography>
-            )}
-            {Object.entries(filteredClassesBySemester)
-              .sort(([semesterA], [semesterB]) => semesterB - semesterA)
-              .filter(([semester, classes]) => classes.length > 0)
-              .map(([semester, classes]) => (
-                <Accordion
-                  key={semester}
-                  expanded={expanded === semester}
-                  onChange={handleChange(semester)}
-                  sx={{
-                    marginBottom: "1rem",
-                  }}
-                >
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography variant="h6">
-                      {formattedSemester(semester)}
-                    </Typography>
-                  </AccordionSummary>
-                  <AccordionDetails>
-                    <List sx={{ padding: 0 }}>
-                      {classes.map((c) => (
-                        <ListItem
-                          key={c.id}
-                          disablePadding
-                          secondaryAction={
-                            user?.role === "lecturer" && (
-                              <Button
-                                component={RouterLink}
-                                to={`/classes/${c.id}/edit`} // Thêm route chỉnh sửa lớp học
-                                size="small"
-                                variant="outlined"
-                                color="primary"
-                                startIcon={<EditIcon />}
-                              >
-                                Edit
-                              </Button>
-                            )
-                          }
-                        >
-                          <ListItemButton
-                            onClick={() => navigate(`/classes/${c.id}`)}
-                          >
-                            <ListItemIcon>
-                              <SchoolIcon />
-                            </ListItemIcon>
-                            <ListItemText
-                              primary={
-                                <>
-                                  <Typography variant="body1">
-                                    {c.subjects.subject_code} - {c.name} (Mã
-                                    lớp: {c.class_code})
-                                  </Typography>
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    Giảng viên: {c.lecturer?.full_name}
-                                  </Typography>
-                                </>
-                              }
-                            />
-                          </ListItemButton>
-                        </ListItem>
-                      ))}
-                    </List>
-                  </AccordionDetails>
-                </Accordion>
-              ))}
-          </>
-        )}
-      </Container>
-      <Footer />
-    </Box>
+          />
+          <ClassListItems
+            classesBySemester={filteredClassesBySemester}
+            searchTerm={searchTerm} // Truyền searchTerm
+            expanded={expanded} // Truyền expanded
+            handleChange={handleChange} // Truyền handleChange
+            classId={classId}
+            handleSearchChange={handleSearchChange}
+            navigate={navigate}
+          />
+        </>
+      )}
+    </Container>
   );
 }
 
