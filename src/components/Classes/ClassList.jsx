@@ -36,25 +36,37 @@ function ClassList() {
   const [expanded, setExpanded] = React.useState(false);
   const navigate = useNavigate();
 
+  const classesData = useMemo(async () => {
+    return await getClassesByUser(user);
+  }, [user]);
+
   useEffect(() => {
     const fetchClasses = async () => {
       setLoading(true);
       try {
-        // Fetch danh sách lớp học dựa trên role
-        const { data, error } = await getClassesByUser(user);
+        const cachedClasses = sessionStorage.getItem(`classes-${user?.id}`);
+        if (cachedClasses) {
+          setClassesBySemester(JSON.parse(cachedClasses));
+        } else {
+          const { data, error } = await classesData;
 
-        if (error) {
-          throw error;
+          if (error) {
+            throw error;
+          }
+
+          // Group lớp học theo học kỳ
+          const groupedClasses = data.reduce((acc, c) => {
+            acc[c.semester] = acc[c.semester] || [];
+            acc[c.semester].push(c);
+            return acc;
+          }, {});
+
+          setClassesBySemester(groupedClasses);
+          sessionStorage.setItem(
+            `classes-${user?.id}`,
+            JSON.stringify(groupedClasses)
+          );
         }
-
-        // Group lớp học theo học kỳ
-        const groupedClasses = data.reduce((acc, c) => {
-          acc[c.semester] = acc[c.semester] || [];
-          acc[c.semester].push(c);
-          return acc;
-        }, {});
-
-        setClassesBySemester(groupedClasses);
       } catch (error) {
         setError(`Đã xảy ra lỗi khi tải danh sách lớp học: ${error.message}`);
         console.error("Error fetching classes:", error);
@@ -64,7 +76,7 @@ function ClassList() {
     };
 
     fetchClasses();
-  }, [user]);
+  }, [classesData]);
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false);
@@ -84,8 +96,7 @@ function ClassList() {
             c.name.toLowerCase().includes(search) ||
             c.subjects.subject_code.toLowerCase().includes(search) ||
             c.class_code.toLowerCase().includes(search) ||
-            (c.lecturers &&
-              c.lecturers.full_name.toLowerCase().includes(search)) // Kiểm tra nếu lecturers tồn tại
+            (c.lecturer && c.lecturer.full_name.toLowerCase().includes(search)) // Kiểm tra nếu lecturer tồn tại
           );
         });
         if (filteredClasses.length > 0) {
@@ -96,6 +107,14 @@ function ClassList() {
       {}
     );
   }, [classesBySemester, searchTerm]);
+
+  const formattedSemester = (semesterInt) => {
+    const year = String(semesterInt).slice(0, 4);
+    const semesterPart = String(semesterInt).slice(4);
+    const semesterName =
+      semesterPart === "3" ? "Học kỳ Hè" : `Học kỳ ${semesterPart}`;
+    return `${year} - ${semesterName}`;
+  };
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
@@ -141,8 +160,9 @@ function ClassList() {
                 Không có lớp học nào.
               </Typography>
             )}
-            {Object.entries(filteredClassesBySemester).map(
-              ([semester, classes]) => (
+            {Object.entries(filteredClassesBySemester)
+              .sort(([semesterA], [semesterB]) => semesterB - semesterA)
+              .map(([semester, classes], index) => (
                 <Accordion
                   key={semester}
                   expanded={expanded === semester}
@@ -150,9 +170,12 @@ function ClassList() {
                   sx={{
                     marginBottom: "1rem",
                   }}
+                  defaultExpanded={index === 0}
                 >
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography variant="h6">{semester}</Typography>
+                    <Typography variant="h6">
+                      {formattedSemester(semester)}
+                    </Typography>
                   </AccordionSummary>
                   <AccordionDetails>
                     <List>
@@ -182,14 +205,14 @@ function ClassList() {
                               primary={
                                 <>
                                   <Typography variant="body1">
-                                    {c.subjects.subject_code} - {c.name} (
-                                    {c.class_code})
+                                    {c.subjects.subject_code} - {c.name} (Mã
+                                    lớp: {c.class_code})
                                   </Typography>
                                   <Typography
                                     variant="body2"
                                     color="text.secondary"
                                   >
-                                    {c.lecturers?.full_name}
+                                    Giảng viên: {c.lecturer?.full_name}
                                   </Typography>
                                 </>
                               }
@@ -200,8 +223,7 @@ function ClassList() {
                     </List>
                   </AccordionDetails>
                 </Accordion>
-              )
-            )}
+              ))}
           </>
         )}
       </Container>

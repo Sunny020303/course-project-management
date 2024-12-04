@@ -13,13 +13,31 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data?.user ?? null);
-      setLoading(false);
+    const getUserData = async () => {
+      const {
+        data: { user: authUser },
+        error,
+      } = await supabase.auth.getUser();
+      if (error) {
+        console.error("Error fetching user data:", error);
+      } else {
+        if (authUser) {
+          const { data: user, error: userError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", authUser.id)
+            .single();
+          if (userError) {
+            console.error("Error getting user:", userError);
+          } else {
+            setUser(user);
+          }
+        }
+        setLoading(false);
+      }
     };
 
-    checkUser();
+    getUserData();
 
     const authListener = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN") {

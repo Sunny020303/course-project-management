@@ -10,7 +10,7 @@ export const getTopics = async (
   try {
     let query = supabase
       .from("topics")
-      .select(`*, lecturers(full_name), student_groups(*)`) // Lấy thông tin nhóm sinh viên
+      .select(`*, lecturer: lecturer_id(full_name), student_groups(*)`) // Lấy thông tin nhóm sinh viên
       .eq("class_id", classId);
 
     if (searchQuery) {
@@ -36,29 +36,40 @@ export const getTopics = async (
 
 export const registerTopic = async (topicId, studentId) => {
   try {
-    // Tạo nhóm mới nếu sinh viên chưa có nhóm
-    let groupId = null;
-    const { data: existingGroup, error: groupError } = await supabase
-      .from("student_groups")
-      .select("id")
-      .eq("topic_id", null) // Kiểm tra nhóm chưa đăng ký đề tài
-      .eq("student_ids", `{"${studentId}"}`)
+    // Lấy nhóm của sinh viên trong lớp của đề tài (nếu có)
+    const { data: topic, error: topicError } = await supabase
+      .from("topics")
+      .select("class_id")
+      .eq("id", topicId)
       .single();
 
-    if (groupError && groupError.code !== "PGRST116") {
-      // Nếu có lỗi khác 'no data found'
-      throw groupError;
-    }
+    if (topicError) throw topicError;
+
+    const { data: existingGroup, error: existingGroupError } = await supabase
+      .from("student_groups")
+      .select("*")
+      .eq("class_id", topic.class_id)
+      .filter("student_ids", "cs", `{${studentId}}`) // contains studentId
+      .maybeSingle();
+
+    if (existingGroupError) throw existingGroupError;
+    let groupId;
 
     if (!existingGroup) {
-      const { data: newGroup, error: newGroupError } = await supabase
+      // Sinh viên chưa có nhóm hoặc nhóm hiện tại không thuộc lớp này, tạo nhóm mới
+      const { data: newGroup, error: createGroupError } = await supabase
         .from("student_groups")
-        .insert({ student_ids: [studentId] })
+        .insert({ student_ids: [studentId], class_id: topic.class_id })
         .single();
-      if (newGroupError) throw newGroupError;
+      if (createGroupError) throw createGroupError;
       groupId = newGroup.id;
     } else {
-      groupId = existingGroup.id;
+      // Sinh viên đã có nhóm trong lớp, kiểm tra xem nhóm đã đăng ký đề tài khác chưa
+      if (existingGroup.topic_id) {
+        return { error: "Bạn đã đăng ký một đề tài khác trong lớp này." };
+      } else {
+        groupId = existingGroup.id;
+      }
     }
 
     // Đăng ký đề tài cho nhóm
