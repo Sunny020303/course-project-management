@@ -9,15 +9,13 @@ import { ConfigProvider } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@mui/material/styles";
 import theme from "./theme";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
 import Dashboard from "./pages/task1/dashboard";
 import CreateTopic from "./pages/task1/CreateTopic";
 import Login from "./components/Authentication/Login";
 import Register from "./components/Authentication/Register";
 import ClassList from "./components/ClassList";
-import TopicList from "./components/TopicList";
-import TopicDetails from "./components/TopicDetails";
+import TopicList from "./components/Topics/TopicList";
+import TopicDetails from "./components/Topics/TopicDetails";
 import supabase from "./services/supabaseClient";
 import Box from "@mui/material/Box";
 import React, { useState, useEffect } from "react";
@@ -67,11 +65,7 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/classes" element={<ClassList />} />
-                  <Route
-                    path="/classes/:classId/topics"
-                    element={<TopicList />}
-                  />{" "}
-                  {/* Route for topic list within a class */}
+                  <Route path="/topics" element={<TopicList />} />
                   <Route path="/topics/:id" element={<TopicDetails />} />
                 </Routes>
               </Router>
