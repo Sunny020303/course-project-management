@@ -12,6 +12,7 @@ import theme from "./theme";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Dashboard from "./pages/task1/dashboard";
+import CreateTopic from "./pages/task1/CreateTopic";
 import Login from "./components/Authentication/Login";
 import Register from "./components/Authentication/Register";
 import ClassList from "./components/ClassList";
@@ -62,6 +63,7 @@ function App() {
               <Router>
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
+                  <Route path="/createtopic" element={<CreateTopic />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/classes" element={<ClassList />} />
