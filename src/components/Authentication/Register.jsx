@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import supabase from "../../services/supabaseClient";
+import { getDepartments } from "../../services/departmentService";
 import { useAuth } from "../../context/AuthContext";
 import {
   TextField,
@@ -41,9 +41,9 @@ function Register() {
 
   useEffect(() => {
     const fetchDepartments = async () => {
-      const { data, error } = await supabase.from("departments").select("*");
+      const { data, error } = await getDepartments();
       if (error) {
-        console.error("Error fetching departments:", error);
+        setError(error);
       } else {
         setDepartments(data);
       }
@@ -71,7 +71,7 @@ function Register() {
       );
       if (error) throw error;
 
-      navigate("/login", { replace: true });
+      navigate("/login?registered=true", { replace: true });
     } catch (error) {
       setError(error.message);
       console.error("Error registering user:", error);

@@ -1,8 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import supabase from "../../services/supabaseClient";
 import { useAuth } from "../../context/AuthContext";
-import { TextField, Button, Container, Typography, Box } from "@mui/material";
+import {
+  TextField,
+  Button,
+  Container,
+  Typography,
+  Box,
+  Alert,
+} from "@mui/material";
 import Header from "../Layout/Header";
 import Footer from "../Layout/Footer";
 
@@ -12,16 +18,30 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const { user, setUserInContext } = useAuth();
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const navigate = useNavigate();
 
+  const { login } = useAuth();
+  const { logout } = useAuth();
+
   useEffect(() => {
-    // Redirect nếu đã đăng nhập
     if (user) {
+      if (showSuccessAlert) {
+        // Đăng xuất sau khi hiển thị thông báo đăng ký thành công
+        logout();
+        setShowSuccessAlert(false);
+        alert("Đăng ký thành công! Vui lòng đăng nhập."); // có thể thay bằng snackbar
+      }
       navigate("/classes", { replace: true });
     }
-  }, [user]);
 
-  const { login } = useAuth();
+    // Lắng nghe query parameter "registered" từ trang đăng ký
+    const searchParams = new URLSearchParams(window.location.search);
+    const registered = searchParams.get("registered");
+    if (registered) {
+      setShowSuccessAlert(true);
+    }
+  }, [user, navigate]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -31,18 +51,7 @@ function Login() {
     try {
       const { error } = await login(email, password);
       if (error) throw error;
-
-      // Get user data and set in context after successful login
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("email", email)
-        .single();
-      if (userError) throw userError;
-
-      setUserInContext(userData); // set user data in context
-
-      navigate("/classes");
+      else navigate("/classes");
     } catch (error) {
       setError(error.message);
     } finally {
@@ -80,6 +89,11 @@ function Login() {
           >
             Đăng nhập
           </Typography>
+          {showSuccessAlert && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Đăng ký thành công!
+            </Alert>
+          )}
           <form onSubmit={handleSubmit}>
             <TextField
               label="Địa chỉ Email"
