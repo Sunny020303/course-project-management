@@ -19,11 +19,13 @@ import {
   TextField,
   InputAdornment,
   IconButton,
+  ListItemIcon,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { Link as RouterLink } from "react-router-dom";
 import EditIcon from "@mui/icons-material/Edit";
 import SearchIcon from "@mui/icons-material/Search";
+import SchoolIcon from "@mui/icons-material/School";
 import Header from "../Layout/Header";
 import Footer from "../Layout/Footer";
 
@@ -162,7 +164,8 @@ function ClassList() {
             )}
             {Object.entries(filteredClassesBySemester)
               .sort(([semesterA], [semesterB]) => semesterB - semesterA)
-              .map(([semester, classes], index) => (
+              .filter(([semester, classes]) => classes.length > 0)
+              .map(([semester, classes]) => (
                 <Accordion
                   key={semester}
                   expanded={expanded === semester}
@@ -170,7 +173,6 @@ function ClassList() {
                   sx={{
                     marginBottom: "1rem",
                   }}
-                  defaultExpanded={index === 0}
                 >
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Typography variant="h6">
@@ -178,7 +180,7 @@ function ClassList() {
                     </Typography>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <List>
+                    <List sx={{ padding: 0 }}>
                       {classes.map((c) => (
                         <ListItem
                           key={c.id}
@@ -201,6 +203,9 @@ function ClassList() {
                           <ListItemButton
                             onClick={() => navigate(`/classes/${c.id}`)}
                           >
+                            <ListItemIcon>
+                              <SchoolIcon />
+                            </ListItemIcon>
                             <ListItemText
                               primary={
                                 <>
