@@ -47,7 +47,7 @@ function ClassList() {
   }, [user, navigate]);
 
   const classesData = useMemo(async () => {
-    return await getClassesByUser(user);
+    if (user) return await getClassesByUser(user);
   }, [user]);
 
   const fetchClasses = async () => {
@@ -116,33 +116,6 @@ function ClassList() {
     );
   }, [classesBySemester, searchTerm]);
 
-  if (loading) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-        }}
-      >
-        <Skeleton
-          variant="rectangular"
-          width="80%"
-          height={50}
-          sx={{ mb: 2 }}
-        />
-        <Skeleton
-          variant="rectangular"
-          width="80%"
-          height={50}
-          sx={{ mb: 2 }}
-        />
-        <Skeleton variant="rectangular" width="80%" height={50} />
-      </Box>
-    );
-  }
-
   return (
     <Container maxWidth="md" sx={{ flexGrow: 1, marginTop: 2 }}>
       <Typography variant="h5" gutterBottom>
@@ -165,16 +138,57 @@ function ClassList() {
           ),
         }}
       />
-      <Box sx={{ mt: 2 }}>
-        <ClassListItems
-          classesBySemester={filteredClassesBySemester}
-          classId={classId}
-          handleClassClick={handleClassClick}
-          error={error}
-          fetchClasses={fetchClasses}
-          searchTerm={searchTerm}
-        />
-      </Box>
+      {loading ? (
+        <Box sx={{ mt: 2 }}>
+          <Skeleton
+            variant="rectangular"
+            width="100%"
+            height={60}
+            sx={{ mb: 2, borderRadius: "8px" }}
+          />
+          <Skeleton
+            variant="rectangular"
+            width="100%"
+            height={60}
+            sx={{ mb: 2, borderRadius: "8px" }}
+          />
+          <Skeleton
+            variant="rectangular"
+            width="100%"
+            height={60}
+            sx={{ mb: 2, borderRadius: "8px" }}
+          />
+          <Skeleton
+            variant="rectangular"
+            width="100%"
+            height={60}
+            sx={{ mb: 2, borderRadius: "8px" }}
+          />
+          <Skeleton
+            variant="rectangular"
+            width="100%"
+            height={60}
+            sx={{ mb: 2, borderRadius: "8px" }}
+          />
+          <Skeleton
+            variant="rectangular"
+            width="100%"
+            height={60}
+            sx={{ borderRadius: "8px" }}
+          />
+        </Box>
+      ) : (
+        <Box sx={{ mt: 2 }}>
+          <ClassListItems
+            classesBySemester={filteredClassesBySemester}
+            classId={classId}
+            handleClassClick={handleClassClick}
+            error={error}
+            fetchClasses={fetchClasses}
+            searchTerm={searchTerm}
+          />
+        </Box>
+      )}
     </Container>
   );
 }

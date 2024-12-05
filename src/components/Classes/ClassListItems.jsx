@@ -46,6 +46,8 @@ function ClassListItems({
     setExpanded(isExpanded ? panel : false);
   };
 
+  useEffect(() => {}, [user]);
+
   useEffect(() => {
     if (searchTerm) {
       setExpanded(Object.keys(classesBySemester));
@@ -127,7 +129,7 @@ function ClassListItems({
                           title="Edit"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          Edit
+                          <EditIcon />
                         </IconButton>
                       )
                     }
@@ -136,6 +138,10 @@ function ClassListItems({
                         classId && classId === c.id
                           ? "action.hover"
                           : "transparent",
+                      "&:hover": {
+                        bgcolor: "action.hover",
+                        cursor: "pointer",
+                      },
                     }}
                   >
                     <ListItemButton onClick={() => handleClassClick(c.id)}>

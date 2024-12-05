@@ -35,7 +35,7 @@ export default function Header() {
           </Typography>
         </div>
         {user && (
-          <IconButton color="inherit" onClick={handleLogout} title="Đăng xuất">
+          <IconButton color="primary" onClick={handleLogout} title="Đăng xuất">
             <LogoutIcon />
           </IconButton>
         )}

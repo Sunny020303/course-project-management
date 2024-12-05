@@ -20,6 +20,7 @@ export const AuthProvider = ({ children }) => {
       } = await supabase.auth.getUser();
       if (error) {
         console.error("Error fetching user data:", error);
+        setLoading(false);
       } else {
         if (authUser) {
           const { data: user, error: userError } = await supabase
