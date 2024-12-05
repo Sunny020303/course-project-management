@@ -1,9 +1,16 @@
 import * as React from "react";
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
+import { AppBar, Toolbar, Typography, IconButton } from "@mui/material";
+import { useAuth } from "../../context/AuthContext";
+import LogoutIcon from "@mui/icons-material/Logout";
 
 export default function Header() {
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    const { error } = await logout();
+    if (error) alert("Đăng xuất thất bại.");
+  };
+
   return (
     <AppBar
       position="static"
@@ -27,7 +34,11 @@ export default function Header() {
             Hệ thống Quản Lý Đề Tài
           </Typography>
         </div>
-        {/* Thêm nút "Đăng xuất" */}
+        {user && (
+          <IconButton color="inherit" onClick={handleLogout} title="Đăng xuất">
+            <LogoutIcon />
+          </IconButton>
+        )}
       </Toolbar>
     </AppBar>
   );
