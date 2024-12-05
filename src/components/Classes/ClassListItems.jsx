@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types"; // Import PropTypes
 import {
   Typography,
@@ -17,27 +17,52 @@ import {
   InputAdornment,
   IconButton,
   ListItemIcon,
+  Skeleton,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import EditIcon from "@mui/icons-material/Edit";
-import SearchIcon from "@mui/icons-material/Search";
-import SchoolIcon from "@mui/icons-material/School";
+import {
+  ExpandMore as ExpandMoreIcon,
+  Visibility as VisibilityIcon,
+  Edit as EditIcon,
+  Search as SearchIcon,
+  School as SchoolIcon,
+} from "@mui/icons-material";
 
 function ClassListItems({
   classesBySemester,
   classId,
-  navigate,
+  handleClassClick,
   error,
   fetchClasses,
+  searchTerm,
 }) {
   const { user } = useAuth();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(
+    Object.keys(classesBySemester).sort((a, b) => b - a)[0] || false
+  );
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false);
   };
+
+  useEffect(() => {
+    if (searchTerm) {
+      setExpanded(Object.keys(classesBySemester));
+    } else if (
+      !expanded &&
+      classesBySemester &&
+      Object.keys(classesBySemester).length > 0
+    ) {
+      setExpanded(Object.keys(classesBySemester).sort((a, b) => b - a)[0]);
+    } else if (
+      expanded.length > 0 &&
+      searchTerm === "" &&
+      !Array.isArray(expanded)
+    ) {
+      setExpanded(expanded);
+    }
+  }, [searchTerm, classesBySemester]);
 
   const formattedSemester = (semesterInt) => {
     const year = String(semesterInt).slice(0, 4);
@@ -74,18 +99,15 @@ function ClassListItems({
     <>
       {Object.entries(classesBySemester)
         .sort(([semesterA], [semesterB]) => semesterB - semesterA)
-        .filter(([semester, classes]) => classes.length > 0)
         .map(([semester, classes]) => (
           <Accordion
             key={semester}
-            expanded={expanded === semester}
+            expanded={Array.isArray(expanded) ? true : expanded === semester}
             onChange={handleChange(semester)}
-            sx={{
-              marginBottom: "1rem",
-            }}
+            sx={{ marginBottom: "1rem", boxShadow: 2 }}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="h6">
+              <Typography variant="h6" sx={{ fontWeight: "bold" }}>
                 {formattedSemester(semester)}
               </Typography>
             </AccordionSummary>
@@ -97,22 +119,26 @@ function ClassListItems({
                     disablePadding
                     secondaryAction={
                       user?.role === "lecturer" && (
-                        <Button
+                        <IconButton
                           component={RouterLink}
-                          to={`/classes/${c.id}/edit`} // Thêm route chỉnh sửa lớp học
+                          to={`/classes/${c.id}/edit`}
                           size="small"
-                          variant="outlined"
                           color="primary"
-                          startIcon={<EditIcon />}
+                          title="Edit"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           Edit
-                        </Button>
+                        </IconButton>
                       )
                     }
+                    sx={{
+                      bgcolor:
+                        classId && classId === c.id
+                          ? "action.hover"
+                          : "transparent",
+                    }}
                   >
-                    <ListItemButton
-                      onClick={() => navigate(`/classes/${c.id}`)}
-                    >
+                    <ListItemButton onClick={() => handleClassClick(c.id)}>
                       <ListItemIcon>
                         <SchoolIcon />
                       </ListItemIcon>
@@ -120,8 +146,14 @@ function ClassListItems({
                         primary={
                           <>
                             <Typography variant="body1">
-                              {c.subjects.subject_code} - {c.name} (Mã lớp:{" "}
-                              {c.class_code})
+                              <b>{c.subjects.subject_code}:</b> {c.name}
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              gutterBottom
+                            >
+                              Mã lớp: {c.class_code}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               Giảng viên: {c.lecturer?.full_name}
@@ -129,6 +161,19 @@ function ClassListItems({
                           </>
                         }
                       />
+                      <IconButton
+                        edge="end"
+                        aria-label="View details"
+                        component={RouterLink}
+                        to={`/classes/${c.id}`}
+                        size="small"
+                        color="primary"
+                        title="View Details"
+                        sx={{ marginLeft: "auto" }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <VisibilityIcon />
+                      </IconButton>
                     </ListItemButton>
                   </ListItem>
                 ))}

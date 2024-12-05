@@ -14,6 +14,7 @@ import {
   TextField,
   InputAdornment,
   IconButton,
+  Skeleton,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import SearchIcon from "@mui/icons-material/Search";
@@ -36,6 +37,14 @@ function ClassList() {
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
   };
+
+  const handleClassClick = (classId) => {
+    navigate(`/classes/${classId}`);
+  };
+
+  useEffect(() => {
+    if (!user) navigate("/login", { replace: true });
+  }, [user, navigate]);
 
   const classesData = useMemo(async () => {
     return await getClassesByUser(user);
@@ -107,54 +116,65 @@ function ClassList() {
     );
   }, [classesBySemester, searchTerm]);
 
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <Skeleton
+          variant="rectangular"
+          width="80%"
+          height={50}
+          sx={{ mb: 2 }}
+        />
+        <Skeleton
+          variant="rectangular"
+          width="80%"
+          height={50}
+          sx={{ mb: 2 }}
+        />
+        <Skeleton variant="rectangular" width="80%" height={50} />
+      </Box>
+    );
+  }
+
   return (
     <Container maxWidth="md" sx={{ flexGrow: 1, marginTop: 2 }}>
       <Typography variant="h5" gutterBottom>
         Danh sách lớp học
       </Typography>
-      {loading ? (
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            height: "100vh",
-          }}
-        >
-          <CircularProgress />
-        </Box>
-      ) : error ? (
-        <Alert severity="error">{error}</Alert>
-      ) : (
-        <>
-          <TextField
-            label="Tìm kiếm"
-            variant="outlined"
-            fullWidth
-            value={searchTerm}
-            onChange={handleSearchChange}
-            sx={{ mb: 2 }}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton>
-                    <SearchIcon />
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-          />
-          <Box sx={{ mt: 2 }}>
-            <ClassListItems
-              classesBySemester={filteredClassesBySemester}
-              classId={classId}
-              navigate={navigate}
-              error={error}
-              fetchClasses={fetchClasses}
-            />
-          </Box>
-        </>
-      )}
+      <TextField
+        label="Tìm kiếm"
+        variant="outlined"
+        fullWidth
+        value={searchTerm}
+        onChange={handleSearchChange}
+        sx={{ mb: 2 }}
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton>
+                <SearchIcon />
+              </IconButton>
+            </InputAdornment>
+          ),
+        }}
+      />
+      <Box sx={{ mt: 2 }}>
+        <ClassListItems
+          classesBySemester={filteredClassesBySemester}
+          classId={classId}
+          handleClassClick={handleClassClick}
+          error={error}
+          fetchClasses={fetchClasses}
+          searchTerm={searchTerm}
+        />
+      </Box>
     </Container>
   );
 }
