@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import PropTypes from "prop-types"; // Import PropTypes
 import {
   Typography,
@@ -27,14 +27,17 @@ import SchoolIcon from "@mui/icons-material/School";
 
 function ClassListItems({
   classesBySemester,
-  searchTerm,
-  expanded,
-  handleChange,
   classId,
-  handleSearchChange,
   navigate,
+  error,
+  fetchClasses,
 }) {
   const { user } = useAuth();
+  const [expanded, setExpanded] = useState(false);
+
+  const handleChange = (panel) => (event, isExpanded) => {
+    setExpanded(isExpanded ? panel : false);
+  };
 
   const formattedSemester = (semesterInt) => {
     const year = String(semesterInt).slice(0, 4);
@@ -49,6 +52,21 @@ function ClassListItems({
       <Typography variant="body1" align="center" sx={{ mt: 2 }}>
         Không có lớp học nào.
       </Typography>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        severity="error"
+        action={
+          <Button color="inherit" size="small" onClick={fetchClasses}>
+            Tải lại
+          </Button>
+        }
+      >
+        {error}
+      </Alert>
     );
   }
 

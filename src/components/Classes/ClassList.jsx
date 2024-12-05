@@ -41,41 +41,47 @@ function ClassList() {
     return await getClassesByUser(user);
   }, [user]);
 
-  useEffect(() => {
-    const fetchClasses = async () => {
-      setLoading(true);
-      try {
-        const cachedClasses = sessionStorage.getItem(`classes-${user?.id}`);
-        if (cachedClasses) {
-          setClassesBySemester(JSON.parse(cachedClasses));
-        } else {
-          const { data, error } = await classesData;
+  const fetchClasses = async () => {
+    setLoading(true);
+    try {
+      const cachedClasses = sessionStorage.getItem(`classes-${user?.id}`);
+      if (cachedClasses) {
+        setClassesBySemester(JSON.parse(cachedClasses));
+      } else {
+        const { data, error } = await classesData;
 
-          if (error) {
-            throw error;
-          }
-
-          // Group lớp học theo học kỳ
-          const groupedClasses = data.reduce((acc, c) => {
-            acc[c.semester] = acc[c.semester] || [];
-            acc[c.semester].push(c);
-            return acc;
-          }, {});
-
-          setClassesBySemester(groupedClasses);
-          sessionStorage.setItem(
-            `classes-${user?.id}`,
-            JSON.stringify(groupedClasses)
-          );
+        if (error) {
+          throw error;
         }
-      } catch (error) {
+
+        // Group lớp học theo học kỳ
+        const groupedClasses = data.reduce((acc, c) => {
+          acc[c.semester] = acc[c.semester] || [];
+          acc[c.semester].push(c);
+          return acc;
+        }, {});
+
+        setClassesBySemester(groupedClasses);
+        sessionStorage.setItem(
+          `classes-${user?.id}`,
+          JSON.stringify(groupedClasses)
+        );
+      }
+    } catch (error) {
+      if (error.message === "PGRST116") {
+        // No data found
+        setClassesBySemester({});
+        setError(null); // set error to null so empty state message is displayed
+      } else {
         setError(`Đã xảy ra lỗi khi tải danh sách lớp học: ${error.message}`);
         console.error("Error fetching classes:", error);
-      } finally {
-        setLoading(false);
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchClasses();
   }, [classesData]);
 
@@ -138,15 +144,15 @@ function ClassList() {
               ),
             }}
           />
-          <ClassListItems
-            classesBySemester={filteredClassesBySemester}
-            searchTerm={searchTerm} // Truyền searchTerm
-            expanded={expanded} // Truyền expanded
-            handleChange={handleChange} // Truyền handleChange
-            classId={classId}
-            handleSearchChange={handleSearchChange}
-            navigate={navigate}
-          />
+          <Box sx={{ mt: 2 }}>
+            <ClassListItems
+              classesBySemester={filteredClassesBySemester}
+              classId={classId}
+              navigate={navigate}
+              error={error}
+              fetchClasses={fetchClasses}
+            />
+          </Box>
         </>
       )}
     </Container>
