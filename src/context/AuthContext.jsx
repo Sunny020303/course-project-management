@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import supabase from "../services/supabaseClient";
 import * as authService from "../services/authService";
+import { CircularProgress, Box } from "@mui/material";
 
 const AuthContext = createContext();
 
@@ -13,6 +14,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isLoggedIn = false;
+
     const getUserData = async () => {
       const {
         data: { user: authUser },
@@ -20,7 +23,6 @@ export const AuthProvider = ({ children }) => {
       } = await supabase.auth.getUser();
       if (error) {
         console.error("Error fetching user data:", error);
-        setLoading(false);
       } else {
         if (authUser) {
           const { data: user, error: userError } = await supabase
@@ -34,19 +36,37 @@ export const AuthProvider = ({ children }) => {
             setUser(user);
           }
         }
-        setLoading(false);
       }
+      setLoading(false);
     };
 
     getUserData();
 
-    const authListener = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN") {
-        setUser(session.user);
-      } else if (event === "SIGNED_OUT") {
-        setUser(null);
+    const authListener = supabase.auth.onAuthStateChange(
+      (event, session) => async () => {
+        if (event === "SIGNED_IN") {
+          if (!isLoggedIn) {
+            isLoggedIn = true;
+            setUser(session.user);
+            return;
+          }
+          const { data: publicUser, error: publicUserError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", session.user.id)
+            .single();
+          if (publicUserError) {
+            console.error("Error getting user after sign in:", publicUserError);
+          } else {
+            setUser(publicUser);
+          }
+        } else if (event === "SIGNED_OUT") {
+          setUser(null);
+        }
+
+        setLoading(false);
       }
-    });
+    );
 
     return () => {
       authListener.data.subscription.unsubscribe();
@@ -87,10 +107,18 @@ export const AuthProvider = ({ children }) => {
 
   const value = { user, login, register, logout, loading };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
-      {/* Chỉ render children khi đã kiểm tra xong trạng thái đăng nhập */}
-    </AuthContext.Provider>
+  return loading ? (
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+      }}
+    >
+      <CircularProgress />
+    </Box>
+  ) : (
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
   );
 };
