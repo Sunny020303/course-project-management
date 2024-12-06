@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import supabase from "../../services/supabaseClient";
+import { getTopics, registerTopic } from "../../services/topicService";
+import { getClassDetails } from "../../services/classService";
+import { useAuth } from "../../context/AuthContext";
 import {
   Typography,
   Grid,
@@ -9,20 +11,20 @@ import {
   CardActions,
   Button,
   Box,
-  Pagination,
   TextField,
-  InputLabel,
-  MenuItem,
-  FormControl,
-  Select,
+  InputAdornment,
+  IconButton,
   CircularProgress,
   Alert,
+  Chip,
 } from "@mui/material";
 import { Link, Link as RouterLink } from "react-router-dom";
 import { Container } from "@mui/system";
-import Header from "../Layout/Header";
-import Footer from "../Layout/Footer";
-import { getTopics, registerTopic } from "../../services/topicService";
+import SearchIcon from "@mui/icons-material/Search";
+import moment from "moment";
+import { getGroup, createGroup } from "../../services/groupService";
+import { Add as AddIcon } from "@mui/icons-material";
+import EditIcon from "@mui/icons-material/Edit";
 
 const TOPICS_PER_PAGE = 10; // Số lượng đề tài trên mỗi trang
 
@@ -30,23 +32,137 @@ function ClassTopics() {
   const { classId } = useParams();
   const navigate = useNavigate();
   const [topics, setTopics] = useState([]);
+  const [currentClass, setCurrentClass] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState(""); // Trạng thái đề tài
-  const [user, setUser] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [registerError, setRegisterError] = useState(null);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const { user } = useAuth();
+
+  const formattedSemester = (semesterInt) => {
+    const year = String(semesterInt).slice(0, 4);
+    const semesterPart = String(semesterInt).slice(4);
+    const semesterName =
+      semesterPart === "3" ? "Học kỳ Hè" : `Học kỳ ${semesterPart}`;
+    return `${year} - ${semesterName}`;
+  };
+
+  const handleRegisterTopic = async (topic) => {
+    setRegisterError(null);
+    setRegisterLoading(true);
+
+    try {
+      if (!user) {
+        navigate("/login", { replace: true });
+        return;
+      }
+
+      const { data: group, error: groupError } = await getGroup(
+        user.id,
+        classId
+      );
+
+      if (groupError) throw groupError;
+
+      if (!group) {
+        setRegisterError(
+          "Bạn chưa tham gia nhóm nào trong lớp này. Vui lòng tạo hoặc tham gia một nhóm trước khi đăng ký đề tài."
+        );
+
+        setTimeout(() => {
+          setRegisterError(null);
+        }, 5000);
+        return;
+      }
+
+      if (group.topic_id) {
+        setRegisterError("Nhóm của bạn đã đăng ký một đề tài khác.");
+        setTimeout(() => {
+          setRegisterError(null);
+        }, 5000);
+        return;
+      }
+
+      // Kiểm tra số lượng nhóm đã đăng ký đề tài
+      const {
+        data: registeredGroups,
+        error: countError,
+        count,
+      } = await supabase
+        .from("student_groups")
+        .select("id", { count: "exact" }) // select and count in 1 query
+        .eq("topic_id", topic.id);
+      if (countError) throw countError;
+
+      if (count >= topic.max_members) {
+        setRegisterError("Đề tài này đã đủ số lượng nhóm đăng ký.");
+        setTimeout(() => {
+          setRegisterError(null);
+        }, 5000);
+        return;
+      }
+
+      const { error: registerError } = await registerTopic(topic.id, group.id);
+      if (registerError) throw registerError;
+
+      setTopics(
+        topics.map((t) =>
+          t.id === topic.id ? { ...t, registeredByUser: true } : t
+        )
+      );
+
+      setRegistrationSuccess(true);
+      setTimeout(() => {
+        setRegistrationSuccess(false);
+      }, 5000);
+    } catch (error) {
+      setRegisterError(error.message);
+      console.error("Error registering topic:", error);
+    } finally {
+      setRegisterLoading(false);
+    }
+  };
+
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value);
+    setCurrentPage(1);
+  };
 
   useEffect(() => {
-    // Lắng nghe thay đổi trạng thái đăng nhập
-    const authListener = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-    });
+    if (!user) navigate("/login", { replace: true });
+  }, [user, navigate]);
 
-    return () => {
-      authListener.data.subscription.unsubscribe();
+  useEffect(() => {
+    const fetchClassDetails = async () => {
+      console.log("Fetching class details...", classId);
+      if (classId) {
+        setLoading(true);
+        try {
+          const { data, error } = await getClassDetails(classId);
+          if (error) throw error;
+          setCurrentClass(data);
+        } catch (error) {
+          setError(error);
+          console.error("Error fetching class details:", error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+        setError("Không tìm thấy lớp học.");
+      }
     };
-  }, []);
+
+    fetchClassDetails();
+  }, [classId]);
 
   useEffect(() => {
     const fetchTopics = async () => {
@@ -54,16 +170,9 @@ function ClassTopics() {
       setError(null);
 
       try {
-        const { data, error } = await getTopics(
-          classId,
-          searchQuery,
-          selectedStatus,
-          currentPage,
-          TOPICS_PER_PAGE
-        );
-        if (error) throw error;
+        const { data, error } = await getTopics(classId, user);
 
-        // Kiểm tra đăng ký của người dùng hiện tại
+        if (error) throw error;
         if (user) {
           const registrations = await supabase
             .from("topic_registrations")
@@ -84,12 +193,8 @@ function ClassTopics() {
       }
     };
 
-    fetchTopics();
-  }, [classId, currentPage, searchQuery, selectedStatus, user]);
-
-  const handlePageChange = (event, value) => {
-    setCurrentPage(value);
-  };
+    if (currentClass) fetchTopics();
+  }, [classId, currentClass, currentPage, searchQuery, selectedStatus, user]);
 
   if (loading) {
     return (
@@ -110,149 +215,152 @@ function ClassTopics() {
     return <Alert severity="error">{error}</Alert>;
   }
 
-  async function handleRegisterTopic(topicId) {
-    if (!user) {
-      // Chưa đăng nhập, chuyển hướng đến trang đăng nhập
-      navigate("/login");
-      return;
-    }
+  if (!currentClass) {
+    return <Typography>Không tìm thấy lớp học</Typography>;
+  }
 
-    try {
-      // Thêm bản ghi vào bảng topic_registrations
-      const { error } = await registerTopic(topicId, user.id);
-
-      if (error) {
-        throw error;
-      }
-
-      // Cập nhật lại danh sách đề tài sau khi đăng ký thành công
-      const updatedTopics = topics.map((topic) => {
-        if (topic.id === topicId) {
-          return { ...topic, registeredByUser: true };
-        }
-        return topic;
-      });
-      setTopics(updatedTopics);
-
-      // Hiển thị thông báo đăng ký thành công (có thể sử dụng Snackbar hoặc Alert)
-      alert("Đăng ký đề tài thành công"); // nên thay bằng snackbar hoặc alert
-    } catch (error) {
-      console.error("Error registering topic:", error);
-      alert("Đăng ký đề tài thất bại"); // nên thay bằng snackbar hoặc alert
-    }
+  if (topics.length === 0 && !loading && !error) {
+    return <Alert severity="info">Không có đề tài nào.</Alert>;
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <Header />
-      <Container maxWidth="md" sx={{ flexGrow: 1, marginTop: 2 }}>
-        <TextField
-          label="Tìm kiếm đề tài"
-          variant="outlined"
-          fullWidth
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          sx={{ mb: 2 }}
-        />
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel id="status-select-label">Trạng thái</InputLabel>
-          <Select
-            labelId="status-select-label"
-            id="status-select"
-            value={selectedStatus}
-            label="Trạng thái"
-            onChange={(e) => setSelectedStatus(e.target.value)}
+    <Container maxWidth="md" sx={{ flexGrow: 1, marginTop: 2 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 2,
+        }}
+      >
+        <Typography variant="h5" gutterBottom sx={{ color: "primary.main" }}>
+          {currentClass?.name} - {formattedSemester(currentClass?.semester)}
+        </Typography>
+        {user?.role === "lecturer" && ( // Chỉ hiển thị nút thêm đề tài cho giảng viên
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={() => navigate(`/classes/${classId}/topics/create`)}
           >
-            <MenuItem value="">Tất cả</MenuItem>
-            <MenuItem value="pending">Chờ phê duyệt</MenuItem>
-            <MenuItem value="approved">Đã phê duyệt</MenuItem>
-            <MenuItem value="rejected">Bị từ chối</MenuItem>
-          </Select>
-        </FormControl>
-        <Grid container spacing={2}>
-          {topics.map((topic) => (
-            <Grid item xs={12} sm={6} md={4} key={topic.id}>
-              <Card
+            Thêm đề tài
+          </Button>
+        )}
+      </Box>
+      <Alert
+        severity="success"
+        sx={{ display: registrationSuccess ? "flex" : "none" }}
+      >
+        Đăng ký thành công!
+      </Alert>
+      <Alert severity="error" sx={{ display: registerError ? "flex" : "none" }}>
+        {registerError}
+      </Alert>
+      <Grid container spacing={2}>
+        {topics.map((topic) => (
+          <Grid item xs={12} sm={6} md={4} key={topic.id}>
+            <Card
+              sx={{
+                borderColor: topic.registeredByUser ? "green" : "default",
+                borderWidth: topic.registeredByUser ? 2 : 1,
+                borderStyle: "solid",
+              }}
+            >
+              <CardContent>
+                <Typography
+                  variant="h6"
+                  component="div"
+                  color="primary.dark"
+                  gutterBottom
+                >
+                  <Link
+                    component={RouterLink}
+                    to={`/topics/${topic.id}`}
+                    sx={{
+                      textDecoration: "none",
+                      "&:hover": { textDecoration: "underline" },
+                    }}
+                  >
+                    {topic.name}
+                  </Link>
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {topic.lecturer?.full_name || "Chưa có"}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Hạn đăng ký:{" "}
+                  {moment(topic.registration_deadline).format("DD/MM/YYYY")}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Học kỳ: {formattedSemester(currentClass.semester)}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Trạng thái:{" "}
+                  {topic.approval_status === "pending"
+                    ? "Chờ phê duyệt"
+                    : topic.approval_status === "approved"
+                    ? "Đã phê duyệt"
+                    : "Bị từ chối"}
+                </Typography>
+              </CardContent>
+              <CardActions
                 sx={{
-                  borderColor: topic.registeredByUser ? "green" : "default", // Đổi màu border nếu đã đăng ký
-                  borderWidth: topic.registeredByUser ? 2 : 1,
-                  borderStyle: "solid",
+                  justifyContent:
+                    user?.role === "lecturer" ? "space-between" : "flex-end",
                 }}
               >
-                <CardContent>
-                  <Typography
-                    variant="h6"
-                    component="div"
-                    color="primary.dark"
-                    gutterBottom
-                  >
-                    <Link
+                {user?.role === "student" && (
+                  <Box>
+                    {/* Nút đăng ký chỉ hiển thị cho sinh viên và khi đề tài được phê duyệt */}
+                    {topic.approval_status === "approved" && (
+                      <>
+                        {!topic.registeredByUser && (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="primary"
+                            onClick={() => handleRegisterTopic(topic)}
+                            disabled={
+                              moment().isAfter(topic.registration_deadline) ||
+                              registerLoading
+                            }
+                          >
+                            {registerLoading ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              "Đăng ký"
+                            )}
+                          </Button>
+                        )}
+                        {topic.registeredByUser && (
+                          <Chip label="Đã đăng ký" color="success" />
+                        )}
+                      </>
+                    )}
+                  </Box>
+                )}
+
+                {user?.role === "lecturer" && ( // hiển thị nút Edit và Delete cho giảng viên
+                  <>
+                    <IconButton
+                      color="primary"
                       component={RouterLink}
-                      to={`/topics/${topic.id}`}
-                      sx={{
-                        textDecoration: "none",
-                        "&:hover": { textDecoration: "underline" },
-                      }}
-                    >
-                      {topic.name}
-                    </Link>
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {topic.lecturers?.full_name || "Chưa có"}
-                  </Typography>
-                  {/* Hiển thị thêm thông tin khác nếu cần */}
-                </CardContent>
-                <CardActions>
-                  <CardActions>
-                    <Button
+                      to={`/classes/${classId}/topics/${topic.id}/edit`}
                       size="small"
-                      variant="outlined"
-                      component={RouterLink}
-                      to={`/topics/${topic.id}`}
                     >
-                      Xem chi tiết
-                    </Button>
-                    {!topic.registeredByUser &&
-                      user &&
-                      user.role === "student" && (
-                        <Button
-                          size="small"
-                          variant="contained"
-                          color="primary"
-                          onClick={() => handleRegisterTopic(topic.id)}
-                        >
-                          Đăng ký
-                        </Button>
-                      )}
-                  </CardActions>
-                  {!topic.registeredByUser &&
-                    user &&
-                    user.role === "student" && ( // Chỉ hiển thị cho sinh viên chưa đăng ký
-                      <Button size="small" variant="contained" color="primary">
-                        Đăng ký
-                      </Button>
-                    )}
-                  {topic.registeredByUser &&
-                    user &&
-                    user.role === "student" && ( // Chỉ hiển thị cho sinh viên đã đăng ký
-                      <Typography variant="body2" color="green">
-                        Đã đăng ký
-                      </Typography>
-                    )}
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-        <Pagination
-          count={Math.ceil(topics.length / TOPICS_PER_PAGE)}
-          page={currentPage}
-          onChange={handlePageChange}
-          sx={{ mt: 2, display: "flex", justifyContent: "center" }}
-        />
-      </Container>
-      <Footer />
-    </Box>
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton color="error" size="small">
+                      <DeleteIcon />
+                    </IconButton>
+                  </>
+                )}
+              </CardActions>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Container>
   );
 }
 
