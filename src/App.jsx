@@ -92,7 +92,10 @@ function App() {
                       <Route path="/login" element={<Login />} />
                       <Route path="/register" element={<Register />} />
                       <Route path="/classes" element={<ClassList />} />
-                      <Route path="/classes/:id" element={<ClassTopics />} />
+                      <Route
+                        path="/classes/:classId"
+                        element={<ClassTopics />}
+                      />
                       <Route
                         path="/topics/details/:id"
                         element={<TopicDetails />}

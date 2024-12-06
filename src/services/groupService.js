@@ -26,8 +26,7 @@ export const getGroup = async (studentId, classId) => {
     const { data, error } = await supabase
       .from("student_group_members")
       .select("student_group_id")
-      .eq("student_id", studentId)
-      .single();
+      .eq("student_id", studentId);
 
     if (error && error.code !== "PGRST116") {
       // Nếu có lỗi khác 'no data found'
