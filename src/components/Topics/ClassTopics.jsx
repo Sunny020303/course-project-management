@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import {
   getTopics,
@@ -32,7 +32,7 @@ import {
 import { Container } from "@mui/system";
 import SearchIcon from "@mui/icons-material/Search";
 import moment from "moment";
-import { getGroup } from "../../services/groupService";
+import { getGroup, createGroup } from "../../services/groupService";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -61,6 +61,7 @@ function ClassTopics() {
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [approvingTopic, setApprovingTopic] = useState(null);
   const [deletingTopic, setDeletingTopic] = useState(null);
+  const [students, setStudents] = useState({});
 
   const open = Boolean(anchorEl);
 
@@ -90,58 +91,79 @@ function ClassTopics() {
       if (groupError) throw groupError;
 
       if (!group) {
-        setRegisterError(
-          "Bạn chưa tham gia nhóm nào trong lớp này. Vui lòng tạo hoặc tham gia một nhóm trước khi đăng ký đề tài."
+        const { data: newGroup, error: createGroupError } = await createGroup(
+          classId,
+          [user.id]
         );
+        if (createGroupError) throw createGroupError;
 
-        setTimeout(() => {
-          setRegisterError(null);
-        }, 5000);
-        return;
+        const { error: registerError } = await registerTopic(
+          topic.id,
+          newGroup.id
+        );
+        if (registerError) throw registerError;
+
+        setTopics(
+          topics.map((t) =>
+            t.id === topic.id
+              ? { ...t, registeredByUser: true, student_ids: [user.id] }
+              : t
+          )
+        );
+      } else {
+        if (group.topic_id) {
+          setRegisterError("Nhóm của bạn đã đăng ký một đề tài khác.");
+          setTimeout(() => {
+            setRegisterError(null);
+          }, 5000);
+          return;
+        }
+
+        // Kiểm tra số lượng nhóm đã đăng ký đề tài
+        const {
+          data: registeredGroups,
+          error: countError,
+          count,
+        } = await supabase
+          .from("student_groups")
+          .select("id", { count: "exact" }) // select and count in 1 query
+          .eq("topic_id", topic.id);
+        if (countError) throw countError;
+
+        if (count >= topic.max_members) {
+          setRegisterError("Đề tài này đã đủ số lượng nhóm đăng ký.");
+          setTimeout(() => {
+            setRegisterError(null);
+          }, 5000);
+          return;
+        }
+
+        const { error: registerError } = await registerTopic(
+          topic.id,
+          group.id
+        );
+        if (registerError) throw registerError;
+
+        setTopics(
+          topics.map((t) =>
+            t.id === topic.id ? { ...t, registeredByUser: true } : t
+          )
+        );
       }
+      setRegistrationSuccess("Đăng ký đề tài thành công!");
 
-      if (group.topic_id) {
-        setRegisterError("Nhóm của bạn đã đăng ký một đề tài khác.");
-        setTimeout(() => {
-          setRegisterError(null);
-        }, 5000);
-        return;
-      }
-
-      // Kiểm tra số lượng nhóm đã đăng ký đề tài
-      const {
-        data: registeredGroups,
-        error: countError,
-        count,
-      } = await supabase
-        .from("student_groups")
-        .select("id", { count: "exact" }) // select and count in 1 query
-        .eq("topic_id", topic.id);
-      if (countError) throw countError;
-
-      if (count >= topic.max_members) {
-        setRegisterError("Đề tài này đã đủ số lượng nhóm đăng ký.");
-        setTimeout(() => {
-          setRegisterError(null);
-        }, 5000);
-        return;
-      }
-
-      const { error: registerError } = await registerTopic(topic.id, group.id);
-      if (registerError) throw registerError;
-
-      setTopics(
-        topics.map((t) =>
-          t.id === topic.id ? { ...t, registeredByUser: true } : t
-        )
-      );
-
-      setRegistrationSuccess(true);
       setTimeout(() => {
         setRegistrationSuccess(false);
-      }, 5000);
+      }, 3000);
     } catch (error) {
-      setRegisterError(error.message);
+      if (error.code === "23505") {
+        setRegisterError("Đề tài này đã có nhóm đăng ký.");
+      } else {
+        setRegisterError(
+          error.message || "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+        );
+      }
+
       console.error("Error registering topic:", error);
     } finally {
       setRegisterLoading(false);
@@ -282,8 +304,70 @@ function ClassTopics() {
     if (currentClass) fetchTopics();
   }, [classId, currentClass, searchQuery, selectedStatus, user]);
 
-  const renderStudentAvatars = (members) => {
+  useEffect(() => {
+    const fetchStudentData = async () => {
+      if (topics && topics.length > 0) {
+        const allStudentIds = topics.reduce((acc, topic) => {
+          return acc.concat(topic.student_ids); // merge all student_ids arrays
+        }, []);
+
+        const uniqueStudentIds = [...new Set(allStudentIds)]; // get unique student ids
+        if (uniqueStudentIds.length === 0) return;
+
+        try {
+          const { data, error } = await supabase
+            .from("users")
+            .select("id, full_name")
+            .in("id", uniqueStudentIds);
+          if (error) throw error;
+
+          const studentMap = data.reduce((map, student) => {
+            map[student.id] = student.full_name;
+            return map;
+          }, {});
+
+          setStudents(studentMap);
+        } catch (error) {
+          console.error("Error fetching student data", error);
+        }
+      }
+    };
+
+    fetchStudentData();
+  }, [topics]);
+
+  const studentGroups = useMemo(() => {
+    if (topics && topics.length > 0) {
+      return topics.reduce((map, topic) => {
+        if (topic.registered_group)
+          map[topic.registered_group] = topic.student_ids;
+        return map;
+      }, {});
+    }
+  }, [topics]);
+
+  const renderStudentAvatars = (topic) => {
+    if (!topic.registered_group) {
+      return (
+        <Tooltip title="Chưa có sinh viên đăng ký">
+          <PersonIcon />
+        </Tooltip>
+      );
+    }
+
+    console.log(topic);
+
+    const studentIds = studentGroups[topic.registered_group] || [];
+
+    const members = studentIds.map((studentId) => ({
+      student_id: studentId,
+      users: {
+        full_name: students[studentId] || "Đang tải...",
+      },
+    }));
+
     if (!members || members.length === 0) {
+      // Kiểm tra members
       return (
         <Tooltip title="Chưa có sinh viên đăng ký">
           <PersonIcon />
@@ -466,9 +550,7 @@ function ClassTopics() {
                   >
                     Nhóm đăng ký:
                   </Typography>
-                  {renderStudentAvatars(
-                    topic.student_groups?.[0]?.student_group_members || []
-                  )}
+                  {renderStudentAvatars(topic)}
                 </Box>
               </CardContent>
               <CardActions

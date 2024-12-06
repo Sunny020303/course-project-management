@@ -1,16 +1,21 @@
 import supabase from "./supabaseClient";
 
-export const createGroup = async (classId, studentId) => {
+export const createGroup = async (classId, studentIds) => {
   try {
     const { data: group, error } = await supabase
       .from("student_groups")
       .insert({ class_id: classId })
       .single();
-
     if (error) throw error;
+
     const { error: memberError } = await supabase
       .from("student_group_members")
-      .insert({ student_id: studentId, student_group_id: group.id });
+      .insert(
+        studentIds.map((studentId) => ({
+          student_id: studentId,
+          student_group_id: group.id,
+        }))
+      );
 
     if (memberError) throw memberError;
 

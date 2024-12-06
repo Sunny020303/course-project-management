@@ -41,11 +41,16 @@ export const getTopics = async (classId, user) => {
     }, {});
 
     const topicsWithGroupInfo = topics.map((topic) => {
-      const groupId = topicIdToGroupIdMap[topic.id];
+      const groupId = topicIdToGroupIdMap[topic.id] || null; // check null
+      const group = groupId
+        ? studentGroups.find((group) => group.id === groupId)
+        : null;
+      const studentIds =
+        group?.student_group_members?.map((member) => member.student_id) || [];
       return {
         ...topic,
-        student_ids: groupId ? studentIdsByGroupId[groupId] : [],
-        registered_group: groupId || null,
+        student_ids: studentIds,
+        registered_group: groupId,
       };
     });
 
