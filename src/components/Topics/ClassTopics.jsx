@@ -17,6 +17,10 @@ import {
   CircularProgress,
   Alert,
   Chip,
+  Skeleton,
+  Avatar,
+  AvatarGroup,
+  Tooltip,
 } from "@mui/material";
 import { Link, Link as RouterLink } from "react-router-dom";
 import { Container } from "@mui/system";
@@ -25,6 +29,7 @@ import moment from "moment";
 import { getGroup, createGroup } from "../../services/groupService";
 import { Add as AddIcon } from "@mui/icons-material";
 import EditIcon from "@mui/icons-material/Edit";
+import { Person as PersonIcon } from "@mui/icons-material";
 
 const TOPICS_PER_PAGE = 10; // Số lượng đề tài trên mỗi trang
 
@@ -136,6 +141,40 @@ function ClassTopics() {
     setCurrentPage(1);
   };
 
+  const renderStudentAvatars = (studentIds) => {
+    if (!studentIds || studentIds.length === 0) {
+      return (
+        <Tooltip title="Chưa có sinh viên đăng ký">
+          <PersonIcon />
+        </Tooltip>
+      );
+    }
+
+    if (studentIds.length <= 5) {
+      return (
+        <AvatarGroup max={5}>
+          {studentIds.map((studentId) => (
+            <Avatar key={studentId} sx={{ bgcolor: "primary.main" }}>
+              {studentId}
+            </Avatar>
+          ))}
+        </AvatarGroup>
+      );
+    }
+
+    return (
+      <Tooltip title={studentIds.map((id) => id).join(", ")}>
+        <AvatarGroup max={5}>
+          {studentIds.slice(0, 5).map((studentId) => (
+            <Avatar key={studentId} sx={{ bgcolor: "primary.main" }}>
+              {studentId}
+            </Avatar>
+          ))}
+        </AvatarGroup>
+      </Tooltip>
+    );
+  };
+
   useEffect(() => {
     if (!user) navigate("/login", { replace: true });
   }, [user, navigate]);
@@ -199,14 +238,37 @@ function ClassTopics() {
   if (loading) {
     return (
       <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-        }}
+        sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}
       >
-        <CircularProgress />
+        <Container maxWidth="md" sx={{ flexGrow: 1, mt: 2 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: "primary.main" }}>
+            {currentClass?.name || <Skeleton />} -{" "}
+            {currentClass ? (
+              formattedSemester(currentClass?.semester)
+            ) : (
+              <Skeleton />
+            )}
+          </Typography>
+          <Grid container spacing={2}>
+            {[...Array(3)].map((_, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <Card sx={{ boxShadow: 2 }}>
+                  <CardContent>
+                    <Skeleton variant="text" sx={{ fontSize: "1.5rem" }} />
+                    <Skeleton
+                      variant="rectangular"
+                      height={100}
+                      sx={{ mt: 1 }}
+                    />
+                  </CardContent>
+                  <CardActions>
+                    <Skeleton variant="circular" width={40} height={40} />
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
       </Box>
     );
   }
@@ -270,23 +332,47 @@ function ClassTopics() {
                 <Typography
                   variant="h6"
                   component="div"
-                  color="primary.dark"
+                  color="primary.main"
                   gutterBottom
+                  sx={{ fontWeight: "bold" }}
                 >
-                  <Link
-                    component={RouterLink}
-                    to={`/topics/${topic.id}`}
-                    sx={{
-                      textDecoration: "none",
-                      "&:hover": { textDecoration: "underline" },
-                    }}
+                  <Tooltip title={topic.name}>
+                    <Link
+                      component={RouterLink}
+                      to={`/topics/details/${topic.id}`}
+                      sx={{
+                        textDecoration: "none",
+                        "&:hover": { textDecoration: "underline" },
+                      }}
+                    >
+                      {topic.name}
+                    </Link>
+                  </Tooltip>
+                </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Giảng viên: {topic.lecturers?.full_name || "Chưa có"}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    display: "-webkit-box",
+                    overflow: "hidden",
+                    WebkitBoxOrient: "vertical",
+                    WebkitLineClamp: 3,
+                  }}
+                >
+                  {topic.description || "Không có mô tả"}
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mr: 1 }}
                   >
-                    {topic.name}
-                  </Link>
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {topic.lecturer?.full_name || "Chưa có"}
-                </Typography>
+                    Nhóm đăng ký:
+                  </Typography>
+                  {renderStudentAvatars(topic.student_ids)}
+                </Box>
                 <Typography variant="body2" color="text.secondary">
                   Hạn đăng ký:{" "}
                   {moment(topic.registration_deadline).format("DD/MM/YYYY")}

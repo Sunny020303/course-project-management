@@ -156,24 +156,6 @@ function ClassList() {
             variant="rectangular"
             width="100%"
             height={60}
-            sx={{ mb: 2, borderRadius: "8px" }}
-          />
-          <Skeleton
-            variant="rectangular"
-            width="100%"
-            height={60}
-            sx={{ mb: 2, borderRadius: "8px" }}
-          />
-          <Skeleton
-            variant="rectangular"
-            width="100%"
-            height={60}
-            sx={{ mb: 2, borderRadius: "8px" }}
-          />
-          <Skeleton
-            variant="rectangular"
-            width="100%"
-            height={60}
             sx={{ borderRadius: "8px" }}
           />
         </Box>
