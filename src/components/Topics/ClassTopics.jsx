@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import {
   getTopics,
   registerTopic,
@@ -22,24 +22,22 @@ import {
   Alert,
   Chip,
   Skeleton,
-  Avatar,
-  AvatarGroup,
   Tooltip,
   Menu,
   MenuItem,
+  Avatar,
+  AvatarGroup,
+  Link,
 } from "@mui/material";
-import { Link, Link as RouterLink } from "react-router-dom";
 import { Container } from "@mui/system";
-import {
-  Search as SearchIcon,
-  Add as AddIcon,
-  Edit as EditIcon,
-  Person as PersonIcon,
-  Delete as DeleteIcon,
-  MoreVert as MoreVertIcon,
-} from "@mui/icons-material";
+import SearchIcon from "@mui/icons-material/Search";
 import moment from "moment";
-import { getGroup, createGroup } from "../../services/groupService";
+import { getGroup } from "../../services/groupService";
+import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import { Person as PersonIcon } from "@mui/icons-material";
 import supabase from "../../services/supabaseClient";
 
 const TOPICS_PER_PAGE = 10; // Số lượng đề tài trên mỗi trang
@@ -47,6 +45,8 @@ const TOPICS_PER_PAGE = 10; // Số lượng đề tài trên mỗi trang
 function ClassTopics() {
   const { classId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [topics, setTopics] = useState([]);
   const [currentClass, setCurrentClass] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -61,7 +61,8 @@ function ClassTopics() {
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [approvingTopic, setApprovingTopic] = useState(null);
   const [deletingTopic, setDeletingTopic] = useState(null);
-  const { user } = useAuth();
+
+  const open = Boolean(anchorEl);
 
   const formattedSemester = (semesterInt) => {
     const year = String(semesterInt).slice(0, 4);
@@ -69,16 +70,6 @@ function ClassTopics() {
     const semesterName =
       semesterPart === "3" ? "Học kỳ Hè" : `Học kỳ ${semesterPart}`;
     return `${year} - ${semesterName}`;
-  };
-
-  const open = Boolean(anchorEl);
-  const handleClick = (event, topic) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedTopic(topic);
-  };
-  const handleClose = () => {
-    setAnchorEl(null);
-    setSelectedTopic(null);
   };
 
   const handleRegisterTopic = async (topic) => {
@@ -157,6 +148,25 @@ function ClassTopics() {
     }
   };
 
+  const handlePageChange = (event, value) => {
+    setCurrentPage(value);
+  };
+
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleClick = (event, topic) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedTopic(topic);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+    setSelectedTopic(null);
+  };
+
   const handleApproveTopic = async (topicId) => {
     setApprovingTopic(topicId);
     try {
@@ -227,49 +237,6 @@ function ClassTopics() {
     handleClose();
   };
 
-  const handlePageChange = (event, value) => {
-    setCurrentPage(value);
-  };
-
-  const handleSearchChange = (event) => {
-    setSearchQuery(event.target.value);
-    setCurrentPage(1);
-  };
-
-  const renderStudentAvatars = (studentIds) => {
-    if (!studentIds || studentIds.length === 0) {
-      return (
-        <Tooltip title="Chưa có sinh viên đăng ký">
-          <PersonIcon />
-        </Tooltip>
-      );
-    }
-
-    if (studentIds.length <= 5) {
-      return (
-        <AvatarGroup max={5}>
-          {studentIds.map((studentId) => (
-            <Avatar key={studentId} sx={{ bgcolor: "primary.main" }}>
-              {studentId}
-            </Avatar>
-          ))}
-        </AvatarGroup>
-      );
-    }
-
-    return (
-      <Tooltip title={studentIds.map((id) => id).join(", ")}>
-        <AvatarGroup max={5}>
-          {studentIds.slice(0, 5).map((studentId) => (
-            <Avatar key={studentId} sx={{ bgcolor: "primary.main" }}>
-              {studentId}
-            </Avatar>
-          ))}
-        </AvatarGroup>
-      </Tooltip>
-    );
-  };
-
   useEffect(() => {
     if (!user) navigate("/login", { replace: true });
   }, [user, navigate]);
@@ -315,6 +282,55 @@ function ClassTopics() {
     if (currentClass) fetchTopics();
   }, [classId, currentClass, searchQuery, selectedStatus, user]);
 
+  const renderStudentAvatars = (members) => {
+    if (!members || members.length === 0) {
+      return (
+        <Tooltip title="Chưa có sinh viên đăng ký">
+          <PersonIcon />
+        </Tooltip>
+      );
+    }
+
+    const maxAvatars = 3;
+
+    if (members.length <= maxAvatars) {
+      return (
+        <AvatarGroup max={maxAvatars}>
+          {members.map((member) => (
+            <Tooltip key={member.student_id} title={member.users.full_name}>
+              <Avatar sx={{ bgcolor: "primary.main" }}>
+                {member.users.full_name
+                  .split(" ")
+                  .map((name) => name[0])
+                  .join("")}
+              </Avatar>
+            </Tooltip>
+          ))}
+        </AvatarGroup>
+      );
+    }
+
+    return (
+      <Tooltip
+        title={members.map((member) => member.users.full_name).join(", ")}
+      >
+        <AvatarGroup max={maxAvatars}>
+          {members.slice(0, maxAvatars).map((member) => (
+            <Tooltip key={member.student_id} title={member.users.full_name}>
+              <Avatar sx={{ bgcolor: "primary.main" }}>
+                {member.users.full_name
+                  .split(" ")
+                  .map((name) => name[0])
+                  .join("")}
+              </Avatar>
+            </Tooltip>
+          ))}
+          <Avatar>+{members.length - maxAvatars}</Avatar>
+        </AvatarGroup>
+      </Tooltip>
+    );
+  };
+
   if (loading) {
     return (
       <Box
@@ -357,13 +373,10 @@ function ClassTopics() {
     return <Alert severity="error">{error}</Alert>;
   }
 
-  if (!currentClass) {
-    return <Typography>Không tìm thấy lớp học</Typography>;
-  }
+  if (!currentClass) return <Typography>Không tìm thấy lớp học</Typography>;
 
-  if (topics.length === 0 && !loading && !error) {
+  if (topics.length === 0 && !loading && !error)
     return <Alert severity="info">Không có đề tài nào.</Alert>;
-  }
 
   return (
     <Container maxWidth="md" sx={{ flexGrow: 1, marginTop: 2 }}>
@@ -416,18 +429,16 @@ function ClassTopics() {
                   gutterBottom
                   sx={{ fontWeight: "bold" }}
                 >
-                  <Tooltip title={topic.name}>
-                    <Link
-                      component={RouterLink}
-                      to={`/topics/details/${topic.id}`}
-                      sx={{
-                        textDecoration: "none",
-                        "&:hover": { textDecoration: "underline" },
-                      }}
-                    >
-                      {topic.name}
-                    </Link>
-                  </Tooltip>
+                  <Link
+                    component={RouterLink}
+                    to={`/topics/details/${topic.id}`}
+                    sx={{
+                      textDecoration: "none",
+                      "&:hover": { textDecoration: "underline" },
+                    }}
+                  >
+                    {topic.name}
+                  </Link>
                 </Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   Giảng viên: {topic.lecturer?.full_name || "Chưa có"}
@@ -443,6 +454,10 @@ function ClassTopics() {
                 >
                   {topic.description || "Không có mô tả"}
                 </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Hạn đăng ký:{" "}
+                  {moment(topic.registration_deadline).format("DD/MM/YYYY")}
+                </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
                   <Typography
                     variant="body2"
@@ -451,23 +466,10 @@ function ClassTopics() {
                   >
                     Nhóm đăng ký:
                   </Typography>
-                  {renderStudentAvatars(topic.student_ids)}
+                  {renderStudentAvatars(
+                    topic.student_groups?.[0]?.student_group_members || []
+                  )}
                 </Box>
-                <Typography variant="body2" color="text.secondary">
-                  Hạn đăng ký:{" "}
-                  {moment(topic.registration_deadline).format("DD/MM/YYYY")}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Học kỳ: {formattedSemester(currentClass.semester)}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Trạng thái:{" "}
-                  {topic.approval_status === "pending"
-                    ? "Chờ phê duyệt"
-                    : topic.approval_status === "approved"
-                    ? "Đã phê duyệt"
-                    : "Bị từ chối"}
-                </Typography>
               </CardContent>
               <CardActions
                 sx={{
