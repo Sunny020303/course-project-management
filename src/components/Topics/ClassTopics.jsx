@@ -359,16 +359,9 @@ function ClassTopics() {
 
     console.log(topic);
 
-    const studentIds = studentGroups[topic.registered_group] || [];
+    const members = topic.student_group_members || [];
 
-    const members = studentIds.map((studentId) => ({
-      student_id: studentId,
-      users: {
-        full_name: students[studentId] || "Đang tải...",
-      },
-    }));
-
-    if (!members || members.length === 0) {
+    if (members.length === 0) {
       // Kiểm tra members
       return (
         <Tooltip title="Chưa có sinh viên đăng ký">
@@ -461,7 +454,7 @@ function ClassTopics() {
 
   if (!currentClass) return <Typography>Không tìm thấy lớp học</Typography>;
 
-  if (topics.length === 0 && !loading && !error)
+  if ((!topics || topics.length === 0) && !loading && !error)
     return <Alert severity="info">Không có đề tài nào.</Alert>;
 
   return (
@@ -631,36 +624,40 @@ function ClassTopics() {
                       </IconButton>
                     </Tooltip>
                     <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
-                      <MenuItem
-                        onClick={() => handleApproveTopic(selectedTopic.id)}
-                        disabled={approvingTopic === selectedTopic.id}
-                      >
-                        {approvingTopic === selectedTopic.id ? (
-                          <CircularProgress size={20} />
-                        ) : (
-                          "Phê duyệt"
-                        )}
-                      </MenuItem>
-                      <MenuItem
-                        onClick={() => handleRejectTopic(selectedTopic.id)}
-                        disabled={approvingTopic === selectedTopic.id}
-                      >
-                        {approvingTopic === selectedTopic.id ? (
-                          <CircularProgress size={20} />
-                        ) : (
-                          "Từ chối"
-                        )}
-                      </MenuItem>
-                      <MenuItem
-                        onClick={() => handleDeleteTopic(selectedTopic.id)}
-                        disabled={deletingTopic === selectedTopic.id}
-                      >
-                        {deletingTopic === selectedTopic.id ? (
-                          <CircularProgress size={20} />
-                        ) : (
-                          "Xóa"
-                        )}
-                      </MenuItem>
+                      {selectedTopic && (
+                        <>
+                          <MenuItem
+                            onClick={() => handleApproveTopic(selectedTopic.id)}
+                            disabled={approvingTopic === selectedTopic.id}
+                          >
+                            {approvingTopic === selectedTopic.id ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              "Phê duyệt"
+                            )}
+                          </MenuItem>
+                          <MenuItem
+                            onClick={() => handleRejectTopic(selectedTopic.id)}
+                            disabled={approvingTopic === selectedTopic.id}
+                          >
+                            {approvingTopic === selectedTopic.id ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              "Từ chối"
+                            )}
+                          </MenuItem>
+                          <MenuItem
+                            onClick={() => handleDeleteTopic(selectedTopic.id)}
+                            disabled={deletingTopic === selectedTopic.id}
+                          >
+                            {deletingTopic === selectedTopic.id ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              "Xóa"
+                            )}
+                          </MenuItem>
+                        </>
+                      )}
                     </Menu>
                   </>
                 )}
