@@ -13,15 +13,17 @@ export const getTopics = async (classId, user) => {
 
     const { data: studentGroups, error: studentGroupsError } = await supabase
       .from("student_groups")
-      .select("id, topic_id")
+      .select(
+        `id, topic_id, student_group_members(student_id, users: student_id(full_name))`
+      )
       .eq("class_id", classId);
 
     if (studentGroupsError) {
       throw studentGroupsError;
     }
 
-    const topicIdToGroupIdMap = studentGroups.reduce((map, group) => {
-      map[group.topic_id] = group.id;
+    const studentGroupsByTopicId = studentGroups.reduce((map, group) => {
+      map[group.topic_id] = group;
       return map;
     }, {});
 
@@ -41,16 +43,16 @@ export const getTopics = async (classId, user) => {
     }, {});
 
     const topicsWithGroupInfo = topics.map((topic) => {
-      const groupId = topicIdToGroupIdMap[topic.id] || null; // check null
-      const group = groupId
-        ? studentGroups.find((group) => group.id === groupId)
-        : null;
+      const registeredGroup = studentGroupsByTopicId[topic.id];
       const studentIds =
-        group?.student_group_members?.map((member) => member.student_id) || [];
+        registeredGroup?.student_group_members.map(
+          (member) => member.student_id
+        ) || [];
       return {
         ...topic,
         student_ids: studentIds,
-        registered_group: groupId,
+        student_group_members: registeredGroup?.student_group_members || [], // Add student_group_members
+        registered_group: registeredGroup?.id || null, // Add registered group ID
       };
     });
 
