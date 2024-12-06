@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getTopics, registerTopic } from "../../services/topicService";
+import {
+  getTopics,
+  registerTopic,
+  deleteTopic,
+} from "../../services/topicService";
 import { getClassDetails } from "../../services/classService";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -21,15 +25,22 @@ import {
   Avatar,
   AvatarGroup,
   Tooltip,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import { Link, Link as RouterLink } from "react-router-dom";
 import { Container } from "@mui/system";
-import SearchIcon from "@mui/icons-material/Search";
+import {
+  Search as SearchIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Person as PersonIcon,
+  Delete as DeleteIcon,
+  MoreVert as MoreVertIcon,
+} from "@mui/icons-material";
 import moment from "moment";
 import { getGroup, createGroup } from "../../services/groupService";
-import { Add as AddIcon } from "@mui/icons-material";
-import EditIcon from "@mui/icons-material/Edit";
-import { Person as PersonIcon } from "@mui/icons-material";
+import supabase from "../../services/supabaseClient";
 
 const TOPICS_PER_PAGE = 10; // Số lượng đề tài trên mỗi trang
 
@@ -46,6 +57,10 @@ function ClassTopics() {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState(null);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [approvingTopic, setApprovingTopic] = useState(null);
+  const [deletingTopic, setDeletingTopic] = useState(null);
   const { user } = useAuth();
 
   const formattedSemester = (semesterInt) => {
@@ -54,6 +69,16 @@ function ClassTopics() {
     const semesterName =
       semesterPart === "3" ? "Học kỳ Hè" : `Học kỳ ${semesterPart}`;
     return `${year} - ${semesterName}`;
+  };
+
+  const open = Boolean(anchorEl);
+  const handleClick = (event, topic) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedTopic(topic);
+  };
+  const handleClose = () => {
+    setAnchorEl(null);
+    setSelectedTopic(null);
   };
 
   const handleRegisterTopic = async (topic) => {
@@ -132,6 +157,76 @@ function ClassTopics() {
     }
   };
 
+  const handleApproveTopic = async (topicId) => {
+    setApprovingTopic(topicId);
+    try {
+      const { error } = await supabase
+        .from("topics")
+        .update({ approval_status: "approved" })
+        .eq("id", topicId);
+      if (error) throw error;
+
+      setTopics(
+        topics.map((topic) =>
+          topic.id === topicId
+            ? { ...topic, approval_status: "approved" }
+            : topic
+        )
+      );
+      alert("Phê duyệt đề tài thành công.");
+    } catch (error) {
+      console.error("Error approving topic:", error);
+      alert("Phê duyệt đề tài thất bại.");
+    } finally {
+      setApprovingTopic(null);
+      handleClose();
+    }
+  };
+
+  const handleRejectTopic = async (topicId) => {
+    setApprovingTopic(topicId);
+
+    try {
+      const { error } = await supabase
+        .from("topics")
+        .update({ approval_status: "rejected" })
+        .eq("id", topicId);
+      if (error) throw error;
+
+      setTopics(
+        topics.map((topic) =>
+          topic.id === topicId
+            ? { ...topic, approval_status: "rejected" }
+            : topic
+        )
+      );
+      alert("Từ chối đề tài thành công.");
+    } catch (error) {
+      console.error("Error rejecting topic:", error);
+      alert("Từ chối đề tài thất bại.");
+    } finally {
+      setApprovingTopic(null);
+      handleClose();
+    }
+  };
+
+  const handleDeleteTopic = async (topicId) => {
+    setDeletingTopic(topicId);
+    try {
+      const { error } = await deleteTopic(topicId);
+      if (error) throw error;
+      setTopics(topics.filter((topic) => topic.id !== topicId)); // remove deleted topic from UI
+
+      alert("Xóa đề tài thành công!");
+    } catch (error) {
+      console.error("Error deleting topic:", error);
+      alert("Xóa đề tài thất bại.");
+    } finally {
+      setDeletingTopic(null);
+    }
+    handleClose();
+  };
+
   const handlePageChange = (event, value) => {
     setCurrentPage(value);
   };
@@ -181,7 +276,6 @@ function ClassTopics() {
 
   useEffect(() => {
     const fetchClassDetails = async () => {
-      console.log("Fetching class details...", classId);
       if (classId) {
         setLoading(true);
         try {
@@ -207,33 +301,19 @@ function ClassTopics() {
     const fetchTopics = async () => {
       setLoading(true);
       setError(null);
-
       try {
         const { data, error } = await getTopics(classId, user);
-
         if (error) throw error;
-        if (user) {
-          const registrations = await supabase
-            .from("topic_registrations")
-            .select("topic_id")
-            .eq("student_id", user.id);
-          const registeredTopicIds = registrations.data.map((r) => r.topic_id);
-          data.forEach((topic) => {
-            topic.registeredByUser = registeredTopicIds.includes(topic.id);
-          });
-        }
 
         setTopics(data);
       } catch (error) {
         setError(error.message);
-        console.error("Error fetching topics:", error);
       } finally {
         setLoading(false);
       }
     };
-
     if (currentClass) fetchTopics();
-  }, [classId, currentClass, currentPage, searchQuery, selectedStatus, user]);
+  }, [classId, currentClass, searchQuery, selectedStatus, user]);
 
   if (loading) {
     return (
@@ -350,7 +430,7 @@ function ClassTopics() {
                   </Tooltip>
                 </Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Giảng viên: {topic.lecturers?.full_name || "Chưa có"}
+                  Giảng viên: {topic.lecturer?.full_name || "Chưa có"}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -426,7 +506,7 @@ function ClassTopics() {
                   </Box>
                 )}
 
-                {user?.role === "lecturer" && ( // hiển thị nút Edit và Delete cho giảng viên
+                {user?.role === "lecturer" && (
                   <>
                     <IconButton
                       color="primary"
@@ -436,9 +516,47 @@ function ClassTopics() {
                     >
                       <EditIcon />
                     </IconButton>
-                    <IconButton color="error" size="small">
-                      <DeleteIcon />
+
+                    <IconButton
+                      color="error"
+                      size="small"
+                      onClick={(event) => handleClick(event, topic)}
+                      disabled={deletingTopic || approvingTopic}
+                    >
+                      <MoreVertIcon />
                     </IconButton>
+                    <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
+                      <MenuItem
+                        onClick={() => handleApproveTopic(selectedTopic.id)}
+                        disabled={approvingTopic === selectedTopic.id}
+                      >
+                        {approvingTopic === selectedTopic.id ? (
+                          <CircularProgress size={20} />
+                        ) : (
+                          "Phê duyệt"
+                        )}
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() => handleRejectTopic(selectedTopic.id)}
+                        disabled={approvingTopic === selectedTopic.id}
+                      >
+                        {approvingTopic === selectedTopic.id ? (
+                          <CircularProgress size={20} />
+                        ) : (
+                          "Từ chối"
+                        )}
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() => handleDeleteTopic(selectedTopic.id)}
+                        disabled={deletingTopic === selectedTopic.id}
+                      >
+                        {deletingTopic === selectedTopic.id ? (
+                          <CircularProgress size={20} />
+                        ) : (
+                          "Xóa"
+                        )}
+                      </MenuItem>
+                    </Menu>
                   </>
                 )}
               </CardActions>

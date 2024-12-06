@@ -78,3 +78,14 @@ export const registerTopic = async (topicId, groupId) => {
     return { error: error.message };
   }
 };
+
+export const deleteTopic = async (topicId) => {
+  try {
+    const { error } = await supabase.from("topics").delete().eq("id", topicId);
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error("Error deleting topic:", error);
+    return { error: error.message };
+  }
+};
