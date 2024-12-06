@@ -66,13 +66,15 @@ function ClassTopics() {
 
   const open = Boolean(anchorEl);
 
-  const formattedSemester = (semesterInt) => {
-    const year = String(semesterInt).slice(0, 4);
-    const semesterPart = String(semesterInt).slice(4);
-    const semesterName =
-      semesterPart === "3" ? "Học kỳ Hè" : `Học kỳ ${semesterPart}`;
-    return `${year} - ${semesterName}`;
-  };
+  const formattedSemester = useMemo(() => {
+    return (semesterInt) => {
+      const year = String(semesterInt).slice(0, 4);
+      const semesterPart = String(semesterInt).slice(4);
+      const semesterName =
+        semesterPart === "3" ? "Hè" : `Học kỳ ${semesterPart}`;
+      return `${year} - ${semesterName}`;
+    };
+  }, []);
 
   const handleRegisterTopic = async (topic) => {
     setRegisterError(null);
@@ -157,15 +159,14 @@ function ClassTopics() {
         setRegistrationSuccess(false);
       }, 3000);
     } catch (error) {
+      console.error("Error registering topic:", error);
       if (error.code === "23505") {
         setRegisterError("Đề tài này đã có nhóm đăng ký.");
+      } else if (error.code === "23503") {
+        setRegisterError("Lớp học không hợp lệ");
       } else {
-        setRegisterError(
-          error.message || "Đã có lỗi xảy ra. Vui lòng thử lại sau."
-        );
+        setRegisterError("Đã có lỗi xảy ra. Vui lòng thử lại.");
       }
-
-      console.error("Error registering topic:", error);
     } finally {
       setRegisterLoading(false);
     }
@@ -608,23 +609,27 @@ function ClassTopics() {
 
                 {user?.role === "lecturer" && (
                   <>
-                    <IconButton
-                      color="primary"
-                      component={RouterLink}
-                      to={`/classes/${classId}/topics/${topic.id}/edit`}
-                      size="small"
-                    >
-                      <EditIcon />
-                    </IconButton>
+                    <Tooltip title="Chỉnh sửa">
+                      <IconButton
+                        color="primary"
+                        component={RouterLink}
+                        to={`/classes/${classId}/topics/${topic.id}/edit`}
+                        size="small"
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
 
-                    <IconButton
-                      color="error"
-                      size="small"
-                      onClick={(event) => handleClick(event, topic)}
-                      disabled={deletingTopic || approvingTopic}
-                    >
-                      <MoreVertIcon />
-                    </IconButton>
+                    <Tooltip title="Xóa">
+                      <IconButton
+                        color="error"
+                        size="small"
+                        onClick={(event) => handleClick(event, topic)}
+                        disabled={deletingTopic || approvingTopic}
+                      >
+                        <MoreVertIcon />
+                      </IconButton>
+                    </Tooltip>
                     <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
                       <MenuItem
                         onClick={() => handleApproveTopic(selectedTopic.id)}
