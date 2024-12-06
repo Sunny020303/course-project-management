@@ -28,6 +28,7 @@ import {
   Avatar,
   AvatarGroup,
   Link,
+  Stack,
 } from "@mui/material";
 import { Container } from "@mui/system";
 import SearchIcon from "@mui/icons-material/Search";
@@ -542,6 +543,20 @@ function ClassTopics() {
                   Hạn đăng ký:{" "}
                   {moment(topic.registration_deadline).format("DD/MM/YYYY")}
                 </Typography>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                  <Typography variant="body2" color="text.secondary">
+                    Trạng thái:
+                  </Typography>
+                  {topic.approval_status === "pending" && (
+                    <Chip label="Chờ phê duyệt" color="warning" size="small" />
+                  )}
+                  {topic.approval_status === "approved" && (
+                    <Chip label="Đã phê duyệt" color="success" size="small" />
+                  )}
+                  {topic.approval_status === "rejected" && (
+                    <Chip label="Bị từ chối" color="error" size="small" />
+                  )}
+                </Stack>
                 <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
                   <Typography
                     variant="body2"
@@ -562,31 +577,32 @@ function ClassTopics() {
                 {user?.role === "student" && (
                   <Box>
                     {/* Nút đăng ký chỉ hiển thị cho sinh viên và khi đề tài được phê duyệt */}
-                    {topic.approval_status === "approved" && (
-                      <>
-                        {!topic.registeredByUser && (
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="primary"
-                            onClick={() => handleRegisterTopic(topic)}
-                            disabled={
-                              moment().isAfter(topic.registration_deadline) ||
-                              registerLoading
-                            }
-                          >
-                            {registerLoading ? (
-                              <CircularProgress size={20} />
-                            ) : (
-                              "Đăng ký"
-                            )}
-                          </Button>
-                        )}
-                        {topic.registeredByUser && (
-                          <Chip label="Đã đăng ký" color="success" />
-                        )}
-                      </>
-                    )}
+                    {!topic.registered_group &&
+                      topic.approval_status === "approved" && (
+                        <>
+                          {!topic.registeredByUser && (
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="primary"
+                              onClick={() => handleRegisterTopic(topic)}
+                              disabled={
+                                moment().isAfter(topic.registration_deadline) ||
+                                registerLoading
+                              }
+                            >
+                              {registerLoading ? (
+                                <CircularProgress size={20} />
+                              ) : (
+                                "Đăng ký"
+                              )}
+                            </Button>
+                          )}
+                          {topic.registeredByUser && (
+                            <Chip label="Đã đăng ký" color="success" />
+                          )}
+                        </>
+                      )}
                   </Box>
                 )}
 
