@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   getTopics,
   registerTopic,
@@ -22,28 +22,17 @@ import {
   Alert,
   Chip,
   Skeleton,
-  Tooltip,
-  Menu,
   MenuItem,
-  Avatar,
-  AvatarGroup,
-  Link,
-  Stack,
-  Snackbar,
   Select,
   InputLabel,
   FormControl,
 } from "@mui/material";
 import { Container } from "@mui/system";
-import SearchIcon from "@mui/icons-material/Search";
+import { Search as SearchIcon, Add as AddIcon } from "@mui/icons-material";
 import moment from "moment";
 import { getGroup, createGroup } from "../../services/groupService";
-import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/Delete";
-import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { Person as PersonIcon } from "@mui/icons-material";
 import supabase from "../../services/supabaseClient";
+import TopicCard from "./TopicCard";
 
 function ClassTopics() {
   const { classId } = useParams();
@@ -64,11 +53,12 @@ function ClassTopics() {
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [approvingTopic, setApprovingTopic] = useState(null);
   const [deletingTopic, setDeletingTopic] = useState(null);
-  const [students, setStudents] = useState({});
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [userGroup, setUserGroup] = useState(null);
+  const [openGroupDialog, setOpenGroupDialog] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState(null);
 
   const open = Boolean(anchorEl);
 
@@ -77,7 +67,7 @@ function ClassTopics() {
       const year = String(semesterInt).slice(0, 4);
       const semesterPart = String(semesterInt).slice(4);
       const semesterName =
-        semesterPart === "3" ? "Hè" : `Học kỳ ${semesterPart}`;
+        semesterPart === "3" ? "Học kỳ Hè" : `Học kỳ ${semesterPart}`;
       return `${year} - ${semesterName}`;
     };
   }, []);
@@ -94,6 +84,16 @@ function ClassTopics() {
     setSnackbarOpen(true);
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
+  };
+
+  const handleOpenGroupDialog = (group) => {
+    setSelectedGroup(group);
+    setOpenGroupDialog(true);
+  };
+
+  const handleCloseGroupDialog = () => {
+    setOpenGroupDialog(false);
+    setSelectedGroup(null);
   };
 
   const handleRegisterTopic = async (topic) => {
@@ -207,6 +207,10 @@ function ClassTopics() {
     setSelectedTopic(null);
   };
 
+  const handleEditTopic = (topicId) => {
+    navigate(`/classes/${classId}/topics/${topicId}/edit`);
+  };
+
   const handleApproveTopic = async (topicId) => {
     setApprovingTopic(topicId);
     try {
@@ -265,7 +269,7 @@ function ClassTopics() {
     try {
       const { error } = await deleteTopic(topicId);
       if (error) throw error;
-      setTopics(topics.filter((topic) => topic.id !== topicId)); // remove deleted topic from UI
+      setTopics(topics.filter((topic) => topic.id !== topicId));
 
       showSnackbar("Xóa đề tài thành công");
     } catch (error) {
@@ -397,66 +401,6 @@ function ClassTopics() {
     if (currentClass) fetchTopics();
   }, [classId, currentClass, currentPage, searchQuery, selectedStatus, user]);
 
-  const studentGroups = useMemo(() => {
-    if (topics && topics.length > 0) {
-      return topics.reduce((map, topic) => {
-        if (topic.registered_group)
-          map[topic.registered_group] = topic.student_ids;
-        return map;
-      }, {});
-    }
-  }, [topics]);
-
-  const renderAvatarGroup = (members) => (
-    <AvatarGroup max={3}>
-      {members.map((member) => (
-        <Tooltip key={member.student_id} title={member.users.full_name}>
-          <Avatar sx={{ bgcolor: "primary.main" }}>
-            {member.users.full_name
-              .split(" ")
-              .map((name) => name[0])
-              .join("")}
-          </Avatar>
-        </Tooltip>
-      ))}
-    </AvatarGroup>
-  );
-
-  const renderStudentAvatars = useMemo(() => {
-    return (members) => {
-      if (!members || members.length === 0) {
-        return (
-          <Tooltip title="Chưa có sinh viên đăng ký">
-            <PersonIcon />
-          </Tooltip>
-        );
-      }
-
-      const maxAvatars = 3;
-      if (members.length <= maxAvatars) {
-        return (
-          <Tooltip
-            title={members.map((member) => member.users.full_name).join(", ")}
-          >
-            {renderAvatarGroup(members)}
-          </Tooltip>
-        );
-      }
-      return (
-        <Tooltip
-          title={members.map((member) => member.users.full_name).join(", ")}
-        >
-          <Box sx={{ display: "flex", alignItems: "center" }}>
-            {renderAvatarGroup(members.slice(0, maxAvatars))}
-            <Typography variant="body2" color="text.secondary" ml={1}>
-              (+{members.length - maxAvatars})
-            </Typography>
-          </Box>
-        </Tooltip>
-      );
-    };
-  }, []);
-
   if (loading) {
     return (
       <Box
@@ -499,7 +443,8 @@ function ClassTopics() {
     return <Alert severity="error">{error}</Alert>;
   }
 
-  if (!currentClass) return <Typography>Không tìm thấy lớp học</Typography>;
+  if (!currentClass && !loading)
+    return <Typography>Không tìm thấy lớp học</Typography>;
 
   if (topics.length === 0 && !loading && !error) {
     return (
@@ -590,197 +535,37 @@ function ClassTopics() {
       <Grid container spacing={2} mt={2}>
         {filteredTopics.map((topic) => (
           <Grid item xs={12} sm={6} md={4} key={topic.id}>
-            <Card
-              sx={{
-                borderColor: topic.registeredByUser ? "green" : "default",
-                borderWidth: topic.registeredByUser ? 2 : 1,
-                borderStyle: "solid",
-              }}
-            >
-              <CardContent>
-                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-                  <Typography variant="body2" color="text.secondary">
-                    Trạng thái:
-                  </Typography>
-                  {topic.approval_status === "pending" && (
-                    <Chip label="Chờ phê duyệt" color="warning" size="small" />
-                  )}
-                  {topic.approval_status === "approved" && (
-                    <Chip label="Đã phê duyệt" color="success" size="small" />
-                  )}
-                  {topic.approval_status === "rejected" && (
-                    <Chip label="Bị từ chối" color="error" size="small" />
-                  )}
-                </Stack>
-                <Typography
-                  variant="h6"
-                  component="div"
-                  color="primary.main"
-                  gutterBottom
-                  sx={{ fontWeight: "bold" }}
-                >
-                  <Tooltip title={topic.name}>
-                    <Link
-                      component={RouterLink}
-                      to={`/topics/details/${topic.id}`}
-                      sx={{
-                        textDecoration: "none",
-                        "&:hover": { textDecoration: "underline" },
-                      }}
-                    >
-                      {topic.name}
-                    </Link>
-                  </Tooltip>
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Giảng viên:{" "}
-                  {topic.lecturer?.full_name || "Chưa có giảng viên hướng dẫn"}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    display: "-webkit-box",
-                    overflow: "hidden",
-                    WebkitBoxOrient: "vertical",
-                    WebkitLineClamp: 3,
-                  }}
-                >
-                  {topic.description || "Không có mô tả"}
-                </Typography>
-                <Grid container spacing={1} alignItems="center">
-                  <Grid item xs={6}>
-                    <Typography variant="body2" color="text.secondary">
-                      Số lượng thành viên đã đăng ký:
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="body1">
-                      {topic.student_group_members?.length || 0}/
-                      {topic.max_members}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    {topic.registered_group && (
-                      <Box
-                        sx={{ display: "flex", alignItems: "center", mt: 1 }}
-                      >
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ mr: 1 }}
-                        >
-                          Nhóm đăng ký:
-                        </Typography>
-                        {renderStudentAvatars(topic.student_group_members)}
-                      </Box>
-                    )}
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="body2" color="text.secondary">
-                      Hạn đăng ký:
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="body1">
-                      {moment(topic.registration_deadline).format("DD/MM/YYYY")}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </CardContent>
-              <CardActions
-                sx={{
-                  justifyContent:
-                    user?.role === "lecturer" ? "space-between" : "flex-end",
-                }}
-              >
-                <RegistrationStatus topic={topic} user={user} />
-
-                {!userGroup && user.role === "student" && (
-                  <Alert
-                    severity="info"
-                    action={
-                      <Button color="inherit" onClick={handleJoinGroup}>
-                        Tạo/Tham gia nhóm
-                      </Button>
-                    }
-                  >
-                    Bạn chưa tham gia nhóm nào. Vui lòng tạo hoặc tham gia một
-                    nhóm để đăng ký đề tài.
-                  </Alert>
-                )}
-
-                {user?.role === "lecturer" && (
-                  <>
-                    <Tooltip title="Chỉnh sửa">
-                      <IconButton
-                        color="primary"
-                        component={RouterLink}
-                        to={`/classes/${classId}/topics/${topic.id}/edit`}
-                        size="small"
-                        disabled={approvingTopic || deletingTopic}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
-
-                    <Tooltip title="Tùy chọn">
-                      <IconButton
-                        color="error"
-                        size="small"
-                        onClick={(event) => handleClick(event, topic)}
-                        disabled={deletingTopic || approvingTopic}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
-                      {selectedTopic && (
-                        <>
-                          <MenuItem
-                            onClick={() => handleApproveTopic(selectedTopic.id)}
-                            disabled={approvingTopic}
-                          >
-                            {approvingTopic === selectedTopic.id ? (
-                              <CircularProgress size={20} />
-                            ) : (
-                              "Phê duyệt"
-                            )}
-                          </MenuItem>
-                          <MenuItem
-                            onClick={() => handleRejectTopic(selectedTopic.id)}
-                            disabled={approvingTopic === selectedTopic.id}
-                          >
-                            {approvingTopic === selectedTopic.id ? (
-                              <CircularProgress size={20} />
-                            ) : (
-                              "Từ chối"
-                            )}
-                          </MenuItem>
-                          <MenuItem
-                            onClick={() => handleDeleteTopic(selectedTopic.id)}
-                            disabled={deletingTopic === selectedTopic.id}
-                          >
-                            {deletingTopic === selectedTopic.id ? (
-                              <CircularProgress size={20} />
-                            ) : (
-                              "Xóa"
-                            )}
-                          </MenuItem>
-                        </>
-                      )}
-                    </Menu>
-                  </>
-                )}
-              </CardActions>
-              <Snackbar
-                open={snackbarOpen}
-                autoHideDuration={6000}
-                onClose={handleSnackbarClose}
-                message={snackbarMessage}
-                severity={snackbarSeverity}
-                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-              />
-            </Card>
+            <TopicCard
+              topic={topic}
+              user={user}
+              currentClass={currentClass}
+              classId={classId}
+              handleRegisterTopic={handleRegisterTopic}
+              handleEditTopic={handleEditTopic}
+              handleDeleteTopic={handleDeleteTopic}
+              handleApproveTopic={handleApproveTopic}
+              handleRejectTopic={handleRejectTopic}
+              registerLoading={registerLoading}
+              approvingTopic={approvingTopic}
+              deletingTopic={deletingTopic}
+              handleClick={handleClick}
+              anchorEl={anchorEl}
+              selectedTopic={selectedTopic}
+              open={open}
+              handleClose={handleClose}
+              handleOpenGroupDialog={handleOpenGroupDialog}
+              selectedGroup={selectedGroup}
+              openGroupDialog={openGroupDialog}
+              handleCloseGroupDialog={handleCloseGroupDialog}
+              userGroup={userGroup}
+              handleJoinGroup={handleJoinGroup}
+              RegistrationStatus={RegistrationStatus}
+              snackbarOpen={snackbarOpen}
+              snackbarMessage={snackbarMessage}
+              handleSnackbarClose={handleSnackbarClose}
+              snackbarSeverity={snackbarSeverity}
+              showSnackbar={showSnackbar}
+            />
           </Grid>
         ))}
       </Grid>

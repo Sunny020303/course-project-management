@@ -15,16 +15,7 @@ export const getTopics = async (classId, user) => {
 
     const { data: studentGroups, error: studentGroupsError } = await supabase
       .from("student_groups")
-      .select(
-        `
-                id,
-                topic_id,
-                student_group_members(
-                    student_id,
-                    users: student_id(full_name)
-                )
-            `
-      )
+      .select(`*, student_group_members(*, users: student_id(*))`)
       .in("topic_id", topicIds);
 
     if (studentGroupsError) throw studentGroupsError;
