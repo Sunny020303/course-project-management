@@ -30,31 +30,26 @@ export const getGroup = async (studentId, classId) => {
   try {
     const { data, error } = await supabase
       .from("student_group_members")
-      .select("student_group_id")
-      .eq("student_id", studentId);
+      .select(
+        `
+          student_group_id,
+          student_groups!inner(
+            id, topic_id
+          )
+        `
+      )
+      .eq("student_id", studentId)
+      .eq("student_groups.class_id", classId)
+      .single();
 
-    if (error && error.code !== "PGRST116") {
-      // Nếu có lỗi khác 'no data found'
+    if (error) {
+      if (error.code === "PGRST116") {
+        return { data: null, error: null };
+      }
       throw error;
     }
 
-    if (!data) return { data: null, error: null };
-
-    const { data: group, error: groupError } = await supabase
-      .from("student_groups")
-      .select("*")
-      .eq("id", data.student_group_id)
-      .eq("class_id", classId)
-      .single();
-
-    if (groupError) {
-      if (groupError.code === "PGRST116") {
-        return { data: null, error: null };
-      }
-      throw groupError;
-    }
-
-    return { data: group, error: null };
+    return { data: data.student_groups, error: null };
   } catch (error) {
     console.error("Error fetching group:", error);
     return { data: null, error: error.message };
