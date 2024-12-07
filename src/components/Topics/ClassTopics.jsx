@@ -281,7 +281,51 @@ function ClassTopics() {
     navigate(`/classes/${classId}/groups`);
   };
 
+  const RegistrationStatus = ({ topic, user }) => {
+    if (!user || user.role !== "student") {
+      return null;
+    }
+
+    if (topic.registeredByUser) {
+      return <Chip label="Đã đăng ký" color="success" />;
+    }
+
+    if (topic.approval_status === "rejected") {
+      return (
+        <Alert severity="warning" size="small">
+          Đề tài đã bị từ chối.
+        </Alert>
+      );
+    }
+
+    if (
+      topic.approval_status === "approved" &&
+      !moment().isAfter(topic.registration_deadline)
+    ) {
+      return (
+        <Button
+          size="small"
+          variant="contained"
+          color="primary"
+          onClick={() => handleRegisterTopic(topic)}
+          disabled={registerLoading}
+        >
+          {registerLoading ? <CircularProgress size={20} /> : "Đăng ký"}
+        </Button>
+      );
+    }
+
+    if (moment().isAfter(topic.registration_deadline)) {
+      return <Alert severity="warning">Hết hạn đăng ký</Alert>;
+    }
+
+    return null;
+  };
+
   const filteredTopics = useMemo(() => {
+    if (!topics) {
+      return [];
+    }
     return topics.filter((topic) => {
       const searchMatch = topic.name
         .toLowerCase()
@@ -526,7 +570,7 @@ function ClassTopics() {
           />
         </Grid>
         <Grid item xs={12} md={6}>
-          <FormControl fullWidth>
+          <FormControl fullWidth variant="outlined">
             <InputLabel id="status-select-label">Trạng thái</InputLabel>
             <Select
               labelId="status-select-label"
@@ -649,38 +693,7 @@ function ClassTopics() {
                     user?.role === "lecturer" ? "space-between" : "flex-end",
                 }}
               >
-                {user?.role === "student" &&
-                  !topic.registered_group &&
-                  topic.approval_status === "approved" &&
-                  userGroup && (
-                    <Button
-                      size="small"
-                      variant="contained"
-                      color="primary"
-                      onClick={() => handleRegisterTopic(topic)}
-                      disabled={
-                        moment().isAfter(topic.registration_deadline) ||
-                        registerLoading
-                      }
-                    >
-                      {registerLoading ? (
-                        <CircularProgress size={20} />
-                      ) : (
-                        "Đăng ký"
-                      )}
-                    </Button>
-                  )}
-
-                {user?.role === "student" && topic.registeredByUser && (
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    color="success"
-                    disabled
-                  >
-                    Đã đăng ký
-                  </Button>
-                )}
+                <RegistrationStatus topic={topic} user={user} />
 
                 {!userGroup && user.role === "student" && (
                   <Alert
