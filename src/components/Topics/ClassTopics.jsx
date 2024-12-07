@@ -29,9 +29,9 @@ import {
   AvatarGroup,
   Link,
   Stack,
+  Snackbar,
 } from "@mui/material";
 import { Container } from "@mui/system";
-import SearchIcon from "@mui/icons-material/Search";
 import moment from "moment";
 import { getGroup, createGroup } from "../../services/groupService";
 import AddIcon from "@mui/icons-material/Add";
@@ -40,8 +40,6 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { Person as PersonIcon } from "@mui/icons-material";
 import supabase from "../../services/supabaseClient";
-
-const TOPICS_PER_PAGE = 10; // Số lượng đề tài trên mỗi trang
 
 function ClassTopics() {
   const { classId } = useParams();
@@ -52,8 +50,6 @@ function ClassTopics() {
   const [currentClass, setCurrentClass] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState(null);
@@ -63,6 +59,9 @@ function ClassTopics() {
   const [approvingTopic, setApprovingTopic] = useState(null);
   const [deletingTopic, setDeletingTopic] = useState(null);
   const [students, setStudents] = useState({});
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   const open = Boolean(anchorEl);
 
@@ -75,6 +74,20 @@ function ClassTopics() {
       return `${year} - ${semesterName}`;
     };
   }, []);
+
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+    setSnackbarOpen(false);
+    setSnackbarMessage("");
+  };
+
+  const showSnackbar = (message, severity = "success") => {
+    setSnackbarOpen(true);
+    setSnackbarMessage(message);
+    setSnackbarSeverity(severity);
+  };
 
   const handleRegisterTopic = async (topic) => {
     setRegisterError(null);
@@ -122,22 +135,14 @@ function ClassTopics() {
           return;
         }
 
-        // Kiểm tra số lượng nhóm đã đăng ký đề tài
-        const {
-          data: registeredGroups,
-          error: countError,
-          count,
-        } = await supabase
-          .from("student_groups")
-          .select("id", { count: "exact" }) // select and count in 1 query
-          .eq("topic_id", topic.id);
-        if (countError) throw countError;
-
-        if (count >= topic.max_members) {
-          setRegisterError("Đề tài này đã đủ số lượng nhóm đăng ký.");
+        if (group.student_ids.length > topic.max_members) {
+          setRegisterError(
+            `Nhóm của bạn có ${group.student_ids.length} thành viên, vượt quá số lượng tối đa ${topic.max_members} cho đề tài này.`
+          );
           setTimeout(() => {
             setRegisterError(null);
           }, 5000);
+
           return;
         }
 
@@ -147,19 +152,28 @@ function ClassTopics() {
         );
         if (registerError) throw registerError;
 
-        setTopics(
-          topics.map((t) =>
-            t.id === topic.id ? { ...t, registeredByUser: true } : t
+        setTopics((prevTopics) =>
+          prevTopics.map((t) =>
+            t.id === topic.id
+              ? {
+                  ...t,
+                  registeredByUser: true,
+                  registered_group: group.id,
+                  student_ids: group.student_ids,
+                }
+              : t
           )
         );
       }
-      setRegistrationSuccess("Đăng ký đề tài thành công!");
+      setRegistrationSuccess(true);
+      showSnackbar("Đăng ký đề tài thành công!");
 
       setTimeout(() => {
         setRegistrationSuccess(false);
       }, 3000);
     } catch (error) {
       console.error("Error registering topic:", error);
+      showSnackbar("Đăng ký đề tài thất bại.", "error");
       if (error.code === "23505") {
         setRegisterError("Đề tài này đã có nhóm đăng ký.");
       } else if (error.code === "23503") {
@@ -170,15 +184,6 @@ function ClassTopics() {
     } finally {
       setRegisterLoading(false);
     }
-  };
-
-  const handlePageChange = (event, value) => {
-    setCurrentPage(value);
-  };
-
-  const handleSearchChange = (event) => {
-    setSearchQuery(event.target.value);
-    setCurrentPage(1);
   };
 
   const handleClick = (event, topic) => {
@@ -207,10 +212,10 @@ function ClassTopics() {
             : topic
         )
       );
-      alert("Phê duyệt đề tài thành công.");
+      showSnackbar("Phê duyệt đề tài thành công");
     } catch (error) {
       console.error("Error approving topic:", error);
-      alert("Phê duyệt đề tài thất bại.");
+      showSnackbar("Phê duyệt đề tài thất bại.", "error");
     } finally {
       setApprovingTopic(null);
       handleClose();
@@ -234,10 +239,10 @@ function ClassTopics() {
             : topic
         )
       );
-      alert("Từ chối đề tài thành công.");
+      showSnackbar("Từ chối đề tài thành công");
     } catch (error) {
       console.error("Error rejecting topic:", error);
-      alert("Từ chối đề tài thất bại.");
+      showSnackbar("Từ chối đề tài thất bại.", "error");
     } finally {
       setApprovingTopic(null);
       handleClose();
@@ -251,9 +256,9 @@ function ClassTopics() {
       if (error) throw error;
       setTopics(topics.filter((topic) => topic.id !== topicId)); // remove deleted topic from UI
 
-      alert("Xóa đề tài thành công!");
+      showSnackbar("Xóa đề tài thành công");
     } catch (error) {
-      console.error("Error deleting topic:", error);
+      showSnackbar("Xóa đề tài thất bại", "error");
       alert("Xóa đề tài thất bại.");
     } finally {
       setDeletingTopic(null);
@@ -304,39 +309,7 @@ function ClassTopics() {
       }
     };
     if (currentClass) fetchTopics();
-  }, [classId, currentClass, searchQuery, selectedStatus, user]);
-
-  useEffect(() => {
-    const fetchStudentData = async () => {
-      if (topics && topics.length > 0) {
-        const allStudentIds = topics.reduce((acc, topic) => {
-          return acc.concat(topic.student_ids); // merge all student_ids arrays
-        }, []);
-
-        const uniqueStudentIds = [...new Set(allStudentIds)]; // get unique student ids
-        if (uniqueStudentIds.length === 0) return;
-
-        try {
-          const { data, error } = await supabase
-            .from("users")
-            .select("id, full_name")
-            .in("id", uniqueStudentIds);
-          if (error) throw error;
-
-          const studentMap = data.reduce((map, student) => {
-            map[student.id] = student.full_name;
-            return map;
-          }, {});
-
-          setStudents(studentMap);
-        } catch (error) {
-          console.error("Error fetching student data", error);
-        }
-      }
-    };
-
-    fetchStudentData();
-  }, [topics]);
+  }, [classId, currentClass, selectedStatus, user]);
 
   const studentGroups = useMemo(() => {
     if (topics && topics.length > 0) {
@@ -348,20 +321,8 @@ function ClassTopics() {
     }
   }, [topics]);
 
-  const renderStudentAvatars = (topic) => {
-    if (!topic.registered_group) {
-      return (
-        <Tooltip title="Chưa có sinh viên đăng ký">
-          <PersonIcon />
-        </Tooltip>
-      );
-    }
-
-    console.log(topic);
-
-    const members = topic.student_group_members || [];
-
-    if (members.length === 0) {
+  const renderStudentAvatars = (members) => {
+    if (!members || members.length === 0) {
       // Kiểm tra members
       return (
         <Tooltip title="Chưa có sinh viên đăng ký">
@@ -501,6 +462,20 @@ function ClassTopics() {
               }}
             >
               <CardContent>
+                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                  <Typography variant="body2" color="text.secondary">
+                    Trạng thái:
+                  </Typography>
+                  {topic.approval_status === "pending" && (
+                    <Chip label="Chờ phê duyệt" color="warning" size="small" />
+                  )}
+                  {topic.approval_status === "approved" && (
+                    <Chip label="Đã phê duyệt" color="success" size="small" />
+                  )}
+                  {topic.approval_status === "rejected" && (
+                    <Chip label="Bị từ chối" color="error" size="small" />
+                  )}
+                </Stack>
                 <Typography
                   variant="h6"
                   component="div"
@@ -508,16 +483,18 @@ function ClassTopics() {
                   gutterBottom
                   sx={{ fontWeight: "bold" }}
                 >
-                  <Link
-                    component={RouterLink}
-                    to={`/topics/details/${topic.id}`}
-                    sx={{
-                      textDecoration: "none",
-                      "&:hover": { textDecoration: "underline" },
-                    }}
-                  >
-                    {topic.name}
-                  </Link>
+                  <Tooltip title={topic.name}>
+                    <Link
+                      component={RouterLink}
+                      to={`/topics/details/${topic.id}`}
+                      sx={{
+                        textDecoration: "none",
+                        "&:hover": { textDecoration: "underline" },
+                      }}
+                    >
+                      {topic.name}
+                    </Link>
+                  </Tooltip>
                 </Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   Giảng viên: {topic.lecturer?.full_name || "Chưa có"}
@@ -533,34 +510,41 @@ function ClassTopics() {
                 >
                   {topic.description || "Không có mô tả"}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Hạn đăng ký:{" "}
-                  {moment(topic.registration_deadline).format("DD/MM/YYYY")}
-                </Typography>
-                <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-                  <Typography variant="body2" color="text.secondary">
-                    Trạng thái:
-                  </Typography>
-                  {topic.approval_status === "pending" && (
-                    <Chip label="Chờ phê duyệt" color="warning" size="small" />
-                  )}
-                  {topic.approval_status === "approved" && (
-                    <Chip label="Đã phê duyệt" color="success" size="small" />
-                  )}
-                  {topic.approval_status === "rejected" && (
-                    <Chip label="Bị từ chối" color="error" size="small" />
-                  )}
-                </Stack>
-                <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mr: 1 }}
-                  >
-                    Nhóm đăng ký:
-                  </Typography>
-                  {renderStudentAvatars(topic)}
-                </Box>
+                <Grid container spacing={1} alignItems="center">
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Số lượng thành viên đã đăng ký:
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body1">
+                      {topic.student_group_members?.length || 0}/
+                      {topic.max_members}
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mr: 1 }}
+                      >
+                        Nhóm đăng ký:
+                      </Typography>
+                      {renderStudentAvatars(topic.student_group_members)}
+                    </Box>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body2" color="text.secondary">
+                      Hạn đăng ký:
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="body1">
+                      {moment(topic.registration_deadline).format("DD/MM/YYYY")}
+                    </Typography>
+                  </Grid>
+                </Grid>
               </CardContent>
               <CardActions
                 sx={{
@@ -568,36 +552,37 @@ function ClassTopics() {
                     user?.role === "lecturer" ? "space-between" : "flex-end",
                 }}
               >
-                {user?.role === "student" && (
-                  <Box>
-                    {/* Nút đăng ký chỉ hiển thị cho sinh viên và khi đề tài được phê duyệt */}
-                    {!topic.registered_group &&
-                      topic.approval_status === "approved" && (
-                        <>
-                          {!topic.registeredByUser && (
-                            <Button
-                              size="small"
-                              variant="contained"
-                              color="primary"
-                              onClick={() => handleRegisterTopic(topic)}
-                              disabled={
-                                moment().isAfter(topic.registration_deadline) ||
-                                registerLoading
-                              }
-                            >
-                              {registerLoading ? (
-                                <CircularProgress size={20} />
-                              ) : (
-                                "Đăng ký"
-                              )}
-                            </Button>
-                          )}
-                          {topic.registeredByUser && (
-                            <Chip label="Đã đăng ký" color="success" />
-                          )}
-                        </>
+                {user?.role === "student" &&
+                  !topic.registeredByUser &&
+                  topic.approval_status === "approved" && (
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="primary"
+                      onClick={() => handleRegisterTopic(topic)}
+                      disabled={
+                        moment().isAfter(topic.registration_deadline) ||
+                        registerLoading ||
+                        topic.registered_group
+                      }
+                    >
+                      {registerLoading ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        "Đăng ký"
                       )}
-                  </Box>
+                    </Button>
+                  )}
+
+                {user?.role === "student" && topic.registeredByUser && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="success"
+                    disabled
+                  >
+                    Đã đăng ký
+                  </Button>
                 )}
 
                 {user?.role === "lecturer" && (
@@ -608,12 +593,13 @@ function ClassTopics() {
                         component={RouterLink}
                         to={`/classes/${classId}/topics/${topic.id}/edit`}
                         size="small"
+                        disabled={approvingTopic || deletingTopic}
                       >
                         <EditIcon />
                       </IconButton>
                     </Tooltip>
 
-                    <Tooltip title="Xóa">
+                    <Tooltip title="Tùy chọn">
                       <IconButton
                         color="error"
                         size="small"
@@ -628,7 +614,7 @@ function ClassTopics() {
                         <>
                           <MenuItem
                             onClick={() => handleApproveTopic(selectedTopic.id)}
-                            disabled={approvingTopic === selectedTopic.id}
+                            disabled={approvingTopic}
                           >
                             {approvingTopic === selectedTopic.id ? (
                               <CircularProgress size={20} />
@@ -662,6 +648,14 @@ function ClassTopics() {
                   </>
                 )}
               </CardActions>
+              <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={handleSnackbarClose}
+                message={snackbarMessage}
+                severity={snackbarSeverity}
+                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+              />
             </Card>
           </Grid>
         ))}
