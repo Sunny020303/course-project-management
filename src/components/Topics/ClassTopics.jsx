@@ -30,8 +30,12 @@ import {
   Link,
   Stack,
   Snackbar,
+  Select,
+  InputLabel,
+  FormControl,
 } from "@mui/material";
 import { Container } from "@mui/system";
+import SearchIcon from "@mui/icons-material/Search";
 import moment from "moment";
 import { getGroup, createGroup } from "../../services/groupService";
 import AddIcon from "@mui/icons-material/Add";
@@ -50,6 +54,8 @@ function ClassTopics() {
   const [currentClass, setCurrentClass] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState(null);
@@ -186,6 +192,16 @@ function ClassTopics() {
     }
   };
 
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusChange = (event) => {
+    setSelectedStatus(event.target.value);
+    setCurrentPage(1);
+  };
+
   const handleClick = (event, topic) => {
     setAnchorEl(event.currentTarget);
     setSelectedTopic(topic);
@@ -266,6 +282,18 @@ function ClassTopics() {
     handleClose();
   };
 
+  const filteredTopics = useMemo(() => {
+    return topics.filter((topic) => {
+      const searchMatch = topic.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const statusMatch = selectedStatus
+        ? topic.approval_status === selectedStatus
+        : true;
+      return searchMatch && statusMatch;
+    });
+  }, [topics, searchQuery, selectedStatus]);
+
   useEffect(() => {
     if (!user) navigate("/login", { replace: true });
   }, [user, navigate]);
@@ -309,7 +337,7 @@ function ClassTopics() {
       }
     };
     if (currentClass) fetchTopics();
-  }, [classId, currentClass, selectedStatus, user]);
+  }, [classId, currentClass, currentPage, searchQuery, selectedStatus, user]);
 
   const studentGroups = useMemo(() => {
     if (topics && topics.length > 0) {
@@ -451,8 +479,45 @@ function ClassTopics() {
       <Alert severity="error" sx={{ display: registerError ? "flex" : "none" }}>
         {registerError}
       </Alert>
-      <Grid container spacing={2}>
-        {topics.map((topic) => (
+      <Grid container spacing={2} mt={2}>
+        <Grid item xs={12} md={6}>
+          <TextField
+            label="Tìm kiếm đề tài"
+            variant="outlined"
+            fullWidth
+            value={searchQuery}
+            onChange={handleSearchChange}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton>
+                    <SearchIcon />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <FormControl fullWidth>
+            <InputLabel id="status-select-label">Trạng thái</InputLabel>
+            <Select
+              labelId="status-select-label"
+              id="status-select"
+              value={selectedStatus}
+              label="Trạng thái"
+              onChange={handleStatusChange}
+            >
+              <MenuItem value="">Tất cả</MenuItem>
+              <MenuItem value="pending">Chờ phê duyệt</MenuItem>
+              <MenuItem value="approved">Đã phê duyệt</MenuItem>
+              <MenuItem value="rejected">Bị từ chối</MenuItem>
+            </Select>
+          </FormControl>
+        </Grid>
+      </Grid>
+      <Grid container spacing={2} mt={2}>
+        {filteredTopics.map((topic) => (
           <Grid item xs={12} sm={6} md={4} key={topic.id}>
             <Card
               sx={{
@@ -524,14 +589,18 @@ function ClassTopics() {
                   </Grid>
                   <Grid item xs={12}>
                     <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ mr: 1 }}
-                      >
-                        Nhóm đăng ký:
-                      </Typography>
-                      {renderStudentAvatars(topic.student_group_members)}
+                      {topic.registered_group && (
+                        <>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ mr: 1 }}
+                          >
+                            Nhóm đăng ký:
+                          </Typography>
+                          {renderStudentAvatars(topic.student_group_members)}
+                        </>
+                      )}
                     </Box>
                   </Grid>
                   <Grid item xs={6}>
@@ -553,7 +622,7 @@ function ClassTopics() {
                 }}
               >
                 {user?.role === "student" &&
-                  !topic.registeredByUser &&
+                  !topic.registered_group &&
                   topic.approval_status === "approved" && (
                     <Button
                       size="small"
@@ -562,8 +631,7 @@ function ClassTopics() {
                       onClick={() => handleRegisterTopic(topic)}
                       disabled={
                         moment().isAfter(topic.registration_deadline) ||
-                        registerLoading ||
-                        topic.registered_group
+                        registerLoading
                       }
                     >
                       {registerLoading ? (
