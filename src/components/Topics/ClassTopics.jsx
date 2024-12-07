@@ -68,6 +68,7 @@ function ClassTopics() {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
+  const [userGroup, setUserGroup] = useState(null);
 
   const open = Boolean(anchorEl);
 
@@ -105,14 +106,7 @@ function ClassTopics() {
         return;
       }
 
-      const { data: group, error: groupError } = await getGroup(
-        user.id,
-        classId
-      );
-
-      if (groupError) throw groupError;
-
-      if (!group) {
+      if (!userGroup) {
         const { data: newGroup, error: createGroupError } = await createGroup(
           classId,
           [user.id]
@@ -133,7 +127,7 @@ function ClassTopics() {
           )
         );
       } else {
-        if (group.topic_id) {
+        if (userGroup.topic_id) {
           setRegisterError("Nhóm của bạn đã đăng ký một đề tài khác.");
           setTimeout(() => {
             setRegisterError(null);
@@ -141,9 +135,9 @@ function ClassTopics() {
           return;
         }
 
-        if (group.student_ids.length > topic.max_members) {
+        if (userGroup.student_ids.length > topic.max_members) {
           setRegisterError(
-            `Nhóm của bạn có ${group.student_ids.length} thành viên, vượt quá số lượng tối đa ${topic.max_members} cho đề tài này.`
+            `Nhóm của bạn có ${userGroup.student_ids.length} thành viên, vượt quá số lượng tối đa ${topic.max_members} cho đề tài này.`
           );
           setTimeout(() => {
             setRegisterError(null);
@@ -154,7 +148,7 @@ function ClassTopics() {
 
         const { error: registerError } = await registerTopic(
           topic.id,
-          group.id
+          userGroup.id
         );
         if (registerError) throw registerError;
 
@@ -164,8 +158,8 @@ function ClassTopics() {
               ? {
                   ...t,
                   registeredByUser: true,
-                  registered_group: group.id,
-                  student_ids: group.student_ids,
+                  registered_group: userGroup.id,
+                  student_ids: userGroup.student_ids,
                 }
               : t
           )
@@ -189,6 +183,7 @@ function ClassTopics() {
       }
     } finally {
       setRegisterLoading(false);
+      setRegistrationSuccess(false);
     }
   };
 
@@ -282,6 +277,10 @@ function ClassTopics() {
     handleClose();
   };
 
+  const handleJoinGroup = () => {
+    navigate(`/classes/${classId}/groups`);
+  };
+
   const filteredTopics = useMemo(() => {
     return topics.filter((topic) => {
       const searchMatch = topic.name
@@ -297,6 +296,21 @@ function ClassTopics() {
   useEffect(() => {
     if (!user) navigate("/login", { replace: true });
   }, [user, navigate]);
+
+  useEffect(() => {
+    const fetchUserGroup = async () => {
+      if (user) {
+        try {
+          const { data, error } = await getGroup(user.id, classId);
+          if (error) throw error;
+          setUserGroup(data);
+        } catch (error) {
+          console.error("Error getting user group", error);
+        }
+      }
+    };
+    fetchUserGroup();
+  }, [classId, user]);
 
   useEffect(() => {
     const fetchClassDetails = async () => {
@@ -349,55 +363,55 @@ function ClassTopics() {
     }
   }, [topics]);
 
-  const renderStudentAvatars = (members) => {
-    if (!members || members.length === 0) {
-      // Kiểm tra members
+  const renderAvatarGroup = (members) => (
+    <AvatarGroup max={3}>
+      {members.map((member) => (
+        <Tooltip key={member.student_id} title={member.users.full_name}>
+          <Avatar sx={{ bgcolor: "primary.main" }}>
+            {member.users.full_name
+              .split(" ")
+              .map((name) => name[0])
+              .join("")}
+          </Avatar>
+        </Tooltip>
+      ))}
+    </AvatarGroup>
+  );
+
+  const renderStudentAvatars = useMemo(() => {
+    return (members) => {
+      if (!members || members.length === 0) {
+        return (
+          <Tooltip title="Chưa có sinh viên đăng ký">
+            <PersonIcon />
+          </Tooltip>
+        );
+      }
+
+      const maxAvatars = 3;
+      if (members.length <= maxAvatars) {
+        return (
+          <Tooltip
+            title={members.map((member) => member.users.full_name).join(", ")}
+          >
+            {renderAvatarGroup(members)}
+          </Tooltip>
+        );
+      }
       return (
-        <Tooltip title="Chưa có sinh viên đăng ký">
-          <PersonIcon />
+        <Tooltip
+          title={members.map((member) => member.users.full_name).join(", ")}
+        >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            {renderAvatarGroup(members.slice(0, maxAvatars))}
+            <Typography variant="body2" color="text.secondary" ml={1}>
+              (+{members.length - maxAvatars})
+            </Typography>
+          </Box>
         </Tooltip>
       );
-    }
-
-    const maxAvatars = 3;
-
-    if (members.length <= maxAvatars) {
-      return (
-        <AvatarGroup max={maxAvatars}>
-          {members.map((member) => (
-            <Tooltip key={member.student_id} title={member.users.full_name}>
-              <Avatar sx={{ bgcolor: "primary.main" }}>
-                {member.users.full_name
-                  .split(" ")
-                  .map((name) => name[0])
-                  .join("")}
-              </Avatar>
-            </Tooltip>
-          ))}
-        </AvatarGroup>
-      );
-    }
-
-    return (
-      <Tooltip
-        title={members.map((member) => member.users.full_name).join(", ")}
-      >
-        <AvatarGroup max={maxAvatars}>
-          {members.slice(0, maxAvatars).map((member) => (
-            <Tooltip key={member.student_id} title={member.users.full_name}>
-              <Avatar sx={{ bgcolor: "primary.main" }}>
-                {member.users.full_name
-                  .split(" ")
-                  .map((name) => name[0])
-                  .join("")}
-              </Avatar>
-            </Tooltip>
-          ))}
-          <Avatar>+{members.length - maxAvatars}</Avatar>
-        </AvatarGroup>
-      </Tooltip>
-    );
-  };
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -443,8 +457,21 @@ function ClassTopics() {
 
   if (!currentClass) return <Typography>Không tìm thấy lớp học</Typography>;
 
-  if ((!topics || topics.length === 0) && !loading && !error)
-    return <Alert severity="info">Không có đề tài nào.</Alert>;
+  if (topics.length === 0 && !loading && !error) {
+    return (
+      <Alert
+        severity="info"
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: 200,
+        }}
+      >
+        Không có đề tài nào.
+      </Alert>
+    );
+  }
 
   return (
     <Container maxWidth="md" sx={{ flexGrow: 1, marginTop: 2 }}>
@@ -562,7 +589,8 @@ function ClassTopics() {
                   </Tooltip>
                 </Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Giảng viên: {topic.lecturer?.full_name || "Chưa có"}
+                  Giảng viên:{" "}
+                  {topic.lecturer?.full_name || "Chưa có giảng viên hướng dẫn"}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -588,20 +616,20 @@ function ClassTopics() {
                     </Typography>
                   </Grid>
                   <Grid item xs={12}>
-                    <Box sx={{ display: "flex", alignItems: "center", mt: 1 }}>
-                      {topic.registered_group && (
-                        <>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ mr: 1 }}
-                          >
-                            Nhóm đăng ký:
-                          </Typography>
-                          {renderStudentAvatars(topic.student_group_members)}
-                        </>
-                      )}
-                    </Box>
+                    {topic.registered_group && (
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", mt: 1 }}
+                      >
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mr: 1 }}
+                        >
+                          Nhóm đăng ký:
+                        </Typography>
+                        {renderStudentAvatars(topic.student_group_members)}
+                      </Box>
+                    )}
                   </Grid>
                   <Grid item xs={6}>
                     <Typography variant="body2" color="text.secondary">
@@ -623,7 +651,8 @@ function ClassTopics() {
               >
                 {user?.role === "student" &&
                   !topic.registered_group &&
-                  topic.approval_status === "approved" && (
+                  topic.approval_status === "approved" &&
+                  userGroup && (
                     <Button
                       size="small"
                       variant="contained"
@@ -651,6 +680,20 @@ function ClassTopics() {
                   >
                     Đã đăng ký
                   </Button>
+                )}
+
+                {!userGroup && user.role === "student" && (
+                  <Alert
+                    severity="info"
+                    action={
+                      <Button color="inherit" onClick={handleJoinGroup}>
+                        Tạo/Tham gia nhóm
+                      </Button>
+                    }
+                  >
+                    Bạn chưa tham gia nhóm nào. Vui lòng tạo hoặc tham gia một
+                    nhóm để đăng ký đề tài.
+                  </Alert>
                 )}
 
                 {user?.role === "lecturer" && (
