@@ -23,6 +23,7 @@ const ClassTopics = lazy(() => import("./components/Topics/ClassTopics"));
 const TopicDetails = lazy(() => import("./components/Topics/TopicDetails"));
 const Dashboard = lazy(() => import("./pages/task1/dashboard"));
 const CreateTopic = lazy(() => import("./pages/task1/CreateTopic"));
+const CreateClass = lazy(() => import("./components/Classes/ClassCreate"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -100,6 +101,7 @@ function App() {
                         path="/topics/details/:id"
                         element={<TopicDetails />}
                       />
+                      <Route path="/createclass" element={<CreateClass/>}/>
                     </Routes>
                   </Box>
                 </Suspense>

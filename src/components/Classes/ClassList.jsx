@@ -15,9 +15,11 @@ import {
   InputAdornment,
   IconButton,
   Skeleton,
+  Button,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import SearchIcon from "@mui/icons-material/Search";
+import { Add } from "@mui/icons-material";
 import ClassListItems from "./ClassListItems";
 
 function ClassList() {
@@ -29,6 +31,7 @@ function ClassList() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [expanded, setExpanded] = useState(false);
+  const [isAdmin,setIsAdmin]=useState(false);
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false);
@@ -44,6 +47,10 @@ function ClassList() {
 
   useEffect(() => {
     if (!user) navigate("/login", { replace: true });
+    else
+    if (user.role === "admin") {
+      setIsAdmin(true);
+    }
   }, [user, navigate]);
 
   const classesData = useMemo(async () => {
@@ -118,9 +125,17 @@ function ClassList() {
 
   return (
     <Container maxWidth="md" sx={{ flexGrow: 1, marginTop: 2 }}>
-      <Typography variant="h5" gutterBottom>
-        Danh sách lớp học
-      </Typography>
+      <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+        <Typography variant="h5" >
+          Danh sách lớp học
+        </Typography>
+        {isAdmin && <Button variant="outlined" onClick={() => {
+          navigate("/createclass")
+        }}>
+          <Add sx={{ marginRight: 1 }} /> Thêm lớp học mới
+        </Button>}
+      </Box>
+
       <TextField
         label="Tìm kiếm"
         variant="outlined"
