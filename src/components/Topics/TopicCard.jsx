@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Typography,
   Card,
@@ -59,7 +59,7 @@ const renderAvatarGroup = (members) => (
   </AvatarGroup>
 );
 
-function TopicCard({
+const TopicCard = React.memo(function TopicCard({
   topic,
   user,
   currentClass,
@@ -90,6 +90,8 @@ function TopicCard({
   snackbarSeverity,
   showSnackbar,
 }) {
+  const [error, setError] = useState(null);
+
   const renderTopicStatus = useMemo(() => {
     return (topic) => {
       switch (topic.approval_status) {
@@ -168,6 +170,10 @@ function TopicCard({
       );
     };
   }, []);
+
+  if (error) {
+    return <Alert severity="error">{error}</Alert>;
+  }
 
   return (
     <Card
@@ -351,21 +357,20 @@ function TopicCard({
           handleRegisterTopic={handleRegisterTopic}
           registerLoading={registerLoading}
         />
-
-        {!userGroup && user.role === "student" && (
-          <Alert
-            severity="info"
-            action={
-              <Button color="inherit" onClick={handleJoinGroup}>
-                Tạo/Tham gia nhóm
-              </Button>
-            }
-          >
-            Bạn chưa tham gia nhóm nào. Vui lòng tạo hoặc tham gia một nhóm để
-            đăng ký đề tài.
-          </Alert>
-        )}
       </CardActions>
+      {!userGroup && user.role === "student" && (
+        <Alert
+          severity="info"
+          action={
+            <Button color="inherit" onClick={handleJoinGroup}>
+              Tạo/Tham gia nhóm
+            </Button>
+          }
+        >
+          Bạn chưa tham gia nhóm nào. Vui lòng tạo hoặc tham gia một nhóm để
+          đăng ký đề tài.
+        </Alert>
+      )}
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={6000}
@@ -376,6 +381,6 @@ function TopicCard({
       />
     </Card>
   );
-}
+});
 
 export default TopicCard;
