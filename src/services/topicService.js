@@ -39,7 +39,7 @@ export const getTopics = async (classId, user) => {
       return {
         ...topic,
         student_group_members: members,
-        registered_group: registeredGroup?.id || null,
+        registered_group: registeredGroup || null,
         student_ids: members.map((member) => member.student_id),
         registeredByUser,
       };
@@ -49,6 +49,34 @@ export const getTopics = async (classId, user) => {
   } catch (error) {
     console.error("Error fetching topics:", error);
     return { data: null, error: error.message };
+  }
+};
+
+export const approveTopic = async (topicId) => {
+  try {
+    const { error } = await supabase
+      .from("topics")
+      .update({ approval_status: "approved" })
+      .eq("id", topicId);
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error("Error approving topic", error);
+    return { error: error.message };
+  }
+};
+
+export const rejectTopic = async (topicId) => {
+  try {
+    const { error } = await supabase
+      .from("topics")
+      .update({ approval_status: "rejected" })
+      .eq("id", topicId);
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error("Error rejecting topic", error);
+    return { error: error.message };
   }
 };
 

@@ -30,14 +30,7 @@ export const getGroup = async (studentId, classId) => {
   try {
     const { data, error } = await supabase
       .from("student_group_members")
-      .select(
-        `
-          student_group_id,
-          student_groups!inner(
-            id, topic_id
-          )
-        `
-      )
+      .select(`*, student_groups!inner(*)`)
       .eq("student_id", studentId)
       .eq("student_groups.class_id", classId)
       .single();
@@ -49,7 +42,21 @@ export const getGroup = async (studentId, classId) => {
       throw error;
     }
 
-    return { data: data.student_groups, error: null };
+    const group = data.student_groups;
+    if (!group) {
+      return { data: null, error: null };
+    }
+
+    const { data: members, error: membersError } = await supabase
+      .from("student_group_members")
+      .select("*, users: student_id(*)")
+      .eq("student_group_id", group.id);
+
+    if (membersError) throw membersError;
+
+    group.members = members;
+
+    return { data: group, error: null };
   } catch (error) {
     console.error("Error fetching group:", error);
     return { data: null, error: error.message };

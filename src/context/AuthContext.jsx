@@ -96,10 +96,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    // Logout supabase
     const { error } = await authService.logout();
     if (!error) {
-      setUser(null); // set user state to null after logout
+      setUser(null);
     }
 
     return { error };
