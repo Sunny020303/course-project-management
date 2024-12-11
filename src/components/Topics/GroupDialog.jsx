@@ -15,8 +15,10 @@ import {
 
 function GroupDialog({ open, onClose, members }) {
   return (
-    <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Thông tin nhóm</DialogTitle>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>
+        <Typography variant="h6">Thông tin nhóm</Typography>
+      </DialogTitle>
       <DialogContent>
         {members && members.length > 0 ? (
           <List>
@@ -32,23 +34,25 @@ function GroupDialog({ open, onClose, members }) {
                 </ListItemAvatar>
                 <ListItemText
                   primary={member.users.full_name}
-                  secondary={
+                  secondary={`Mã số: ${
                     member.users.student_code ||
                     member.users.lecturer_code ||
                     "Không có mã"
-                  }
+                  }`}
                 />
               </ListItem>
             ))}
           </List>
         ) : (
-          <Typography variant="body1">
-            Chưa có thành viên nào trong nhóm.
+          <Typography variant="body2" color="text.secondary">
+            Nhóm chưa có thành viên nào.
           </Typography>
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Đóng</Button>
+        <Button onClick={onClose} color="primary">
+          Đóng
+        </Button>
       </DialogActions>
     </Dialog>
   );

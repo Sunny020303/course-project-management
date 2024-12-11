@@ -1,4 +1,5 @@
 import supabase from "./supabaseClient";
+import { createNotification } from "./notificationService";
 
 export const getTopics = async (classId, user) => {
   try {
@@ -97,6 +98,21 @@ export const registerTopic = async (topicId, groupId) => {
   }
 };
 
+export const cancelTopicRegistration = async (groupId) => {
+  try {
+    const { error } = await supabase
+      .from("student_groups")
+      .update({ topic_id: null })
+      .eq("id", groupId);
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error("Error canceling topic registration:", error);
+    return { error: error.message };
+  }
+};
+
 export const deleteTopic = async (topicId) => {
   try {
     const { error } = await supabase.from("topics").delete().eq("id", topicId);
@@ -104,6 +120,148 @@ export const deleteTopic = async (topicId) => {
     return { error: null };
   } catch (error) {
     console.error("Error deleting topic:", error);
+    return { error: error.message };
+  }
+};
+
+export const requestTopicSwap = async (requestingGroup, requestedGroup) => {
+  try {
+    const { error } = await supabase.from("topic_swap_requests").insert({
+      topic_id: requestingGroup.topics.id,
+      requesting_group_id: requestingGroup.id,
+      requested_group_id: requestedGroup.id,
+      status: "pending",
+    });
+    if (error) throw error;
+
+    requestedGroup.student_group_members.forEach((member) => {
+      createNotification(
+        member.student_id,
+        "swap_request",
+        `Nhóm ${requestingGroup.group_name} đã yêu cầu trao đổi đề tài ${requestingGroup.topics.name} với nhóm của bạn.`
+      );
+    });
+    return { error: null };
+  } catch (error) {
+    console.error("Error requesting topic swap:", error);
+    return { error: error.message };
+  }
+};
+
+export const getTopicSwapRequests = async (groupId) => {
+  try {
+    const { data, error } = await supabase
+      .from("topic_swap_requests")
+      .select(
+        `*, topics(*), requested_group: requested_group_id(*, student_group_members(*, users: student_id!inner(*))), requesting_group: requesting_group_id(*, student_group_members(*, users: student_id!inner(*)))`
+      )
+      .or(
+        `requesting_group_id.eq.${groupId}, requested_group_id.eq.${groupId}`
+      );
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error fetching topic swap requests:", error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const approveTopicSwap = async (request) => {
+  try {
+    const { error } = await supabase.rpc("handle_topic_swap", request);
+    if (error) throw error;
+
+    return { error: null };
+  } catch (error) {
+    console.error("Error approving topic swap:", error);
+    return { error: error.message };
+  }
+};
+
+export const rejectTopicSwap = async (request) => {
+  try {
+    const { error: updateStatusError } = await supabase
+      .from("topic_swap_requests")
+      .update({ status: "rejected", read: true })
+      .eq("id", request.id);
+    if (updateStatusError) throw updateStatusError;
+
+    const { data: requestingGroup, error: reqGroupErr } = await supabase
+      .from("student_groups")
+      .select("student_group_members(student_id)")
+      .eq("id", request.requesting_group_id)
+      .single();
+    if (reqGroupErr) throw reqGroupErr;
+
+    const { data: requestedGroup, error: reqedGroupErr } = await supabase
+      .from("student_groups")
+      .select("student_group_members(student_id)")
+      .eq("id", request.requested_group_id)
+      .single();
+    if (reqedGroupErr) throw reqedGroupErr;
+
+    const requestingGroupStudentIds = requestingGroup.student_group_members.map(
+      (member) => member.student_id
+    );
+    const requestedGroupStudentIds = requestedGroup.student_group_members.map(
+      (member) => member.student_id
+    );
+
+    const notificationPromises = [];
+    requestingGroupStudentIds.forEach((studentId) => {
+      notificationPromises.push(
+        createNotification(
+          studentId,
+          "swap_rejected",
+          `Yêu cầu trao đổi đề tài "${request.topics.name}" của bạn đã bị từ chối.`
+        )
+      );
+    });
+    requestedGroupStudentIds.forEach((studentId) => {
+      notificationPromises.push(
+        createNotification(
+          studentId,
+          "swap_rejected",
+          `Yêu cầu trao đổi đề tài "${request.topics.name}" đã bị từ chối.`
+        )
+      );
+    });
+
+    await Promise.all(notificationPromises);
+
+    return { error: null };
+  } catch (error) {
+    console.error("Error rejecting topic swap:", error);
+    return { error: error.message };
+  }
+};
+
+export const markSwapRequestAsRead = async (requestId) => {
+  try {
+    const { error } = await supabase
+      .from("topic_swap_requests")
+      .update({ read: true })
+      .eq("id", requestId);
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error("Error marking swap request as read:", error);
+    return { error: error.message };
+  }
+};
+
+export const markAllSwapRequestsAsRead = async (groupId) => {
+  try {
+    const { error } = await supabase
+      .from("topic_swap_requests")
+      .update({ read: true })
+      .eq("requested_group_id", groupId)
+      .eq("status", "pending");
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error("Error marking swap request as read:", error);
     return { error: error.message };
   }
 };

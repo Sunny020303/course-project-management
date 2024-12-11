@@ -1,19 +1,33 @@
 import React from "react";
 import { Button, Chip, Alert, CircularProgress } from "@mui/material";
+import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
 import moment from "moment";
 
 function RegistrationStatus({
   topic,
   user,
   handleRegisterTopic,
+  handleCancelRegistration,
   registerLoading,
+  userGroup,
+  handleRequestSwap,
 }) {
   if (!user || user.role !== "student") {
     return null;
   }
 
   if (topic.registeredByUser) {
-    return <Chip label="Đã đăng ký" color="success" />;
+    return (
+      <Button
+        size="small"
+        variant="outlined"
+        color="error"
+        onClick={() => handleCancelRegistration(topic)}
+        disabled={registerLoading}
+      >
+        {registerLoading ? <CircularProgress size={20} /> : "Hủy đăng ký"}
+      </Button>
+    );
   }
 
   if (topic.approval_status === "rejected") {
@@ -24,11 +38,11 @@ function RegistrationStatus({
     );
   }
 
-  if (
-    topic.approval_status === "approved" &&
-    !topic.registered_group &&
-    !moment().isAfter(topic.registration_deadline)
-  ) {
+  if (moment().isAfter(topic.registration_deadline)) {
+    return <Alert severity="warning">Hết hạn đăng ký</Alert>;
+  }
+
+  if (!topic.registered_group) {
     return (
       <Button
         size="small"
@@ -42,8 +56,19 @@ function RegistrationStatus({
     );
   }
 
-  if (moment().isAfter(topic.registration_deadline)) {
-    return <Alert severity="warning">Hết hạn đăng ký</Alert>;
+  if (userGroup) {
+    return (
+      <Button
+        size="small"
+        variant="outlined"
+        color="secondary"
+        startIcon={<SwapHorizIcon />}
+        onClick={() => handleRequestSwap(topic)}
+        disabled={registerLoading}
+      >
+        {registerLoading ? <CircularProgress size={20} /> : "Yêu cầu trao đổi"}
+      </Button>
+    );
   }
 
   return null;

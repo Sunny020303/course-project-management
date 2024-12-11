@@ -6,6 +6,12 @@ import {
   deleteTopic,
   approveTopic,
   rejectTopic,
+  requestTopicSwap,
+  getTopicSwapRequests,
+  approveTopicSwap,
+  rejectTopicSwap,
+  cancelTopicRegistration,
+  markAllSwapRequestsAsRead,
 } from "../../services/topicService";
 import { getClassDetails } from "../../services/classService";
 import { useAuth } from "../../context/AuthContext";
@@ -35,8 +41,16 @@ import {
   InputLabel,
   FormControl,
   Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
   Divider,
   Snackbar,
+  Badge,
 } from "@mui/material";
 import { Container } from "@mui/system";
 import {
@@ -54,6 +68,8 @@ import {
   School as SchoolIcon,
   Event as EventIcon,
   SwapHoriz as SwapHorizIcon,
+  Notifications as NotificationsIcon,
+  NotificationsNone as NotificationsNoneIcon,
 } from "@mui/icons-material";
 import moment from "moment";
 import { getGroup, createGroup } from "../../services/groupService";
@@ -62,11 +78,7 @@ import RegistrationStatus from "./RegistrationStatus";
 import supabase from "../../services/supabaseClient";
 
 function ClassTopics() {
-  const [registerStatus, setRegisterStatus] = useState({
-    loading: false,
-    error: null,
-    success: false,
-  });
+  const [registerLoading, setRegisterLoading] = useState(false);
 
   const { classId } = useParams();
   const navigate = useNavigate();
@@ -89,6 +101,11 @@ function ClassTopics() {
   const [userGroup, setUserGroup] = useState(null);
   const [openGroupDialog, setOpenGroupDialog] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [swapRequests, setSwapRequests] = useState([]);
+  const [openSwapRequestsDialog, setOpenSwapRequestsDialog] = useState(false);
+  const [loadingSwapRequests, setLoadingSwapRequests] = useState(false);
+  const [processingSwap, setProcessingSwap] = useState(false);
+  const [unreadSwapRequestsCount, setUnreadSwapRequestsCount] = useState(0);
 
   const open = Boolean(anchorEl);
 
@@ -101,6 +118,18 @@ function ClassTopics() {
       return `${year} - ${semesterName}`;
     };
   }, []);
+
+  const fetchUserGroup = async () => {
+    if (user) {
+      try {
+        const { data, error } = await getGroup(user.id, classId);
+        if (error) throw error;
+        setUserGroup(data);
+      } catch (error) {
+        console.error("Error getting user group", error);
+      }
+    }
+  };
 
   const fetchTopics = useCallback(async () => {
     setLoading(true);
@@ -118,6 +147,40 @@ function ClassTopics() {
     }
   }, [classId, user]);
 
+  const fetchSwapRequests = useCallback(async () => {
+    setLoadingSwapRequests(true);
+    try {
+      if (!userGroup) return;
+      const { data, error } = await getTopicSwapRequests(userGroup.id);
+      if (error) throw error;
+
+      setSwapRequests(data);
+    } catch (error) {
+      console.error("Error fetching swap requests:", error);
+      showSnackbar("Failed to fetch swap requests.", "error");
+    } finally {
+      setLoadingSwapRequests(false);
+    }
+  }, [userGroup]);
+
+  const fetchUnreadSwapRequestsCount = useCallback(async () => {
+    if (userGroup) {
+      try {
+        const { data, error } = await supabase
+          .from("topic_swap_requests")
+          .select("id", { count: "exact" })
+          .eq("status", "pending")
+          .eq("requested_group_id", userGroup.id)
+          .eq("read", false);
+
+        if (error) throw error;
+        setUnreadSwapRequestsCount(data.length);
+      } catch (error) {
+        console.error("Error fetching unread swap requests count:", error);
+      }
+    }
+  }, [userGroup]);
+
   const handleRetryFetchTopics = () => {
     setError(null);
     fetchTopics();
@@ -131,14 +194,14 @@ function ClassTopics() {
     setSnackbarMessage("");
   };
 
-  const showSnackbar = (message, severity = "success") => {
+  const showSnackbar = (message, severity = "") => {
     setSnackbarOpen(true);
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
   };
 
-  const handleOpenGroupDialog = (group) => {
-    setSelectedGroup(group);
+  const handleOpenGroupDialog = (members) => {
+    setSelectedGroup(members);
     setOpenGroupDialog(true);
   };
 
@@ -148,8 +211,7 @@ function ClassTopics() {
   };
 
   const handleRegisterTopic = async (topic) => {
-    setRegisterStatus((prevStatus) => ({ ...prevStatus, error: null }));
-    setRegisterStatus((prevStatus) => ({ ...prevStatus, loading: true }));
+    setRegisterLoading(true);
 
     try {
       if (!user) {
@@ -169,43 +231,14 @@ function ClassTopics() {
           newGroup.id
         );
         if (registerError) throw registerError;
-        setTopics(
-          topics.map((t) =>
-            t.id === topic.id
-              ? {
-                  ...t,
-                  registeredByUser: true,
-                  student_group_members: [
-                    {
-                      student_id: user.id,
-                      users: { full_name: user.full_name },
-                    },
-                  ],
-                }
-              : t
-          )
-        );
+        await fetchTopics();
+        await fetchUserGroup();
       } else {
-        if (userGroup.topic_id) {
-          setRegisterStatus((prevStatus) => ({
-            ...prevStatus,
-            error: "Nhóm của bạn đã đăng ký một đề tài khác.",
-          }));
-          setTimeout(() => {
-            setRegisterStatus((prevStatus) => ({ ...prevStatus, error: null }));
-          }, 5000);
-          return;
-        }
-
-        if (userGroup.members.length >= topic.max_members) {
-          setRegisterStatus((prevStatus) => ({
-            ...prevStatus,
-            error: `Nhóm của bạn có ${userGroup.members.length} thành viên, vượt quá số lượng tối đa ${topic.max_members} cho đề tài này.`,
-          }));
-          setTimeout(() => {
-            setRegisterStatus((prevStatus) => ({ ...prevStatus, error: null }));
-          }, 5000);
-
+        if (userGroup.members.length > topic.max_members) {
+          showSnackbar(
+            `Nhóm của bạn có ${userGroup.members.length} thành viên, vượt quá số lượng tối đa ${topic.max_members} cho đề tài này.`,
+            "error"
+          );
           return;
         }
 
@@ -214,50 +247,43 @@ function ClassTopics() {
           userGroup.id
         );
         if (registerError) throw registerError;
-        setTopics((prevTopics) =>
-          prevTopics.map((t) =>
-            t.id === topic.id
-              ? {
-                  ...t,
-                  registeredByUser: true,
-                  registered_group: userGroup.id,
-                  student_group_members: userGroup.members,
-                }
-              : t
-          )
-        );
+        await fetchTopics();
+        await fetchUserGroup();
       }
-      setRegisterStatus((prevStatus) => ({
-        ...prevStatus,
-        success: "Đăng ký đề tài thành công!",
-      }));
-      showSnackbar("Đăng ký đề tài thành công!");
-
-      setTimeout(() => {
-        setRegisterStatus((prevStatus) => ({ ...prevStatus, success: false }));
-      }, 3000);
+      showSnackbar("Đăng ký đề tài thành công!", "success");
     } catch (error) {
       console.error("Error registering topic:", error);
-      showSnackbar("Đăng ký đề tài thất bại.", "error");
       if (error.code === "23505") {
-        setRegisterStatus((prevStatus) => ({
-          ...prevStatus,
-          error: "Đề tài này đã có nhóm đăng ký.",
-        }));
+        showSnackbar("Đề tài này đã có nhóm đăng ký.", "error");
       } else if (error.code === "23503") {
-        setRegisterStatus((prevStatus) => ({
-          ...prevStatus,
-          error: "Lớp học không hợp lệ",
-        }));
+        showSnackbar("Lớp học không hợp lệ", "error");
       } else {
-        setRegisterStatus((prevStatus) => ({
-          ...prevStatus,
-          error: error.message,
-        }));
+        showSnackbar(
+          error.message || "Đã có lỗi xảy ra. Vui lòng thử lại.",
+          "error"
+        );
       }
     } finally {
-      setRegisterStatus((prevStatus) => ({ ...prevStatus, loading: false }));
-      setRegisterStatus((prevStatus) => ({ ...prevStatus, success: false }));
+      setRegisterLoading(true);
+    }
+  };
+
+  const handleCancelRegistration = async (topic) => {
+    try {
+      if (!userGroup || !userGroup.topic_id) {
+        showSnackbar("Nhóm của bạn chưa đăng ký đề tài nào.", "error");
+        return;
+      }
+
+      const { error } = await cancelTopicRegistration(userGroup.id);
+      if (error) throw error;
+
+      await fetchTopics();
+      await fetchUserGroup();
+      showSnackbar("Hủy đăng ký đề tài thành công.", "success");
+    } catch (error) {
+      console.error("Error canceling topic registration:", error);
+      showSnackbar("Hủy đăng ký đề tài thất bại.", "error");
     }
   };
 
@@ -291,14 +317,8 @@ function ClassTopics() {
       const { error } = await approveTopic(topicId);
       if (error) throw error;
 
-      setTopics((prevTopics) =>
-        prevTopics.map((topic) =>
-          topic.id === topicId
-            ? { ...topic, approval_status: "approved" }
-            : topic
-        )
-      );
-      showSnackbar("Phê duyệt đề tài thành công");
+      await fetchTopics();
+      showSnackbar("Phê duyệt đề tài thành công", "success");
     } catch (error) {
       console.error("Error approving topic:", error);
       showSnackbar("Phê duyệt đề tài thất bại.", "error");
@@ -315,14 +335,8 @@ function ClassTopics() {
       const { error } = await rejectTopic(topicId);
       if (error) throw error;
 
-      setTopics((prevTopics) =>
-        prevTopics.map((topic) =>
-          topic.id === topicId
-            ? { ...topic, approval_status: "rejected" }
-            : topic
-        )
-      );
-      showSnackbar("Từ chối đề tài thành công");
+      await fetchTopics();
+      showSnackbar("Từ chối đề tài thành công", "success");
     } catch (error) {
       console.error("Error rejecting topic:", error);
       showSnackbar("Từ chối đề tài thất bại.", "error");
@@ -338,10 +352,8 @@ function ClassTopics() {
       const { error } = await deleteTopic(topicId);
       if (error) throw error;
 
-      setTopics((prevTopics) =>
-        prevTopics.filter((topic) => topic.id !== topicId)
-      );
-      showSnackbar("Xóa đề tài thành công");
+      await fetchTopics();
+      showSnackbar("Xóa đề tài thành công", "success");
     } catch (error) {
       showSnackbar("Xóa đề tài thất bại", "error");
       alert("Xóa đề tài thất bại.");
@@ -355,20 +367,74 @@ function ClassTopics() {
     navigate(`/classes/${classId}/groups`);
   };
 
-  const handleRequestSwap = async (topic, requestingGroup) => {
+  const handleOpenSwapRequestsDialog = () => {
+    setOpenSwapRequestsDialog(true);
+  };
+
+  const handleCloseSwapRequestsDialog = () => {
+    setOpenSwapRequestsDialog(false);
     try {
-      const { error } = await supabase.from("topic_swap_requests").insert({
-        topic_id: topic.id,
-        requesting_group_id: requestingGroup.id,
-        requested_group_id: topic.registered_group,
-        status: "pending",
-      });
+      const { error } = markAllSwapRequestsAsRead(userGroup.id);
+      if (error) throw error;
+      setUnreadSwapRequestsCount(0);
+    } catch (error) {
+      console.error("Error marking all swap requests as read:", error);
+    }
+  };
+
+  const handleRequestSwap = async (topic) => {
+    try {
+      if (!userGroup.topic_id) {
+        showSnackbar("Nhóm của bạn chưa đăng ký đề tài nào.", "error");
+        return;
+      }
+
+      const { error: requestError } = await requestTopicSwap(
+        userGroup,
+        topic.registered_group
+      );
+      if (requestError) throw requestError;
+
+      showSnackbar("Đã gửi yêu cầu trao đổi đề tài.", "success");
+    } catch (error) {
+      console.error("Error requesting topic swap:", error);
+      showSnackbar("Lỗi khi gửi yêu cầu trao đổi.", "error");
+    }
+  };
+
+  const handleApproveSwap = async (request) => {
+    setProcessingSwap(true);
+    try {
+      const { error } = await approveTopicSwap(request);
       if (error) throw error;
 
-      showSnackbar("Đã gửi yêu cầu trao đổi đề tài.");
+      await fetchTopics();
+      await fetchSwapRequests();
+      await fetchUserGroup();
+      showSnackbar("Trao đổi đề tài thành công.", "success");
     } catch (error) {
-      console.error("Error requesting swap:", error);
-      showSnackbar("Lỗi khi gửi yêu cầu trao đổi.", "error");
+      console.error("Error approving topic swap:", error);
+      showSnackbar("Lỗi khi trao đổi đề tài.", "error");
+    } finally {
+      setProcessingSwap(false);
+      handleCloseSwapRequestsDialog();
+    }
+  };
+
+  const handleRejectSwap = async (request) => {
+    setProcessingSwap(true);
+    try {
+      const { error } = await rejectTopicSwap(request);
+      if (error) throw error;
+
+      await fetchSwapRequests();
+      showSnackbar("Đã từ chối yêu cầu trao đổi đề tài.", "success");
+    } catch (error) {
+      console.error("Error rejecting topic swap:", error);
+      showSnackbar("Lỗi khi từ chối yêu cầu trao đổi.", "error");
+    } finally {
+      setProcessingSwap(false);
+      handleCloseSwapRequestsDialog();
     }
   };
 
@@ -392,17 +458,6 @@ function ClassTopics() {
   }, [user, navigate]);
 
   useEffect(() => {
-    const fetchUserGroup = async () => {
-      if (user) {
-        try {
-          const { data, error } = await getGroup(user.id, classId);
-          if (error) throw error;
-          setUserGroup(data);
-        } catch (error) {
-          console.error("Error getting user group", error);
-        }
-      }
-    };
     fetchUserGroup();
   }, [classId, user]);
 
@@ -432,6 +487,27 @@ function ClassTopics() {
   useEffect(() => {
     fetchTopics();
   }, [currentClass, fetchTopics]);
+
+  useEffect(() => {
+    fetchSwapRequests();
+  }, [fetchSwapRequests]);
+
+  useEffect(() => {
+    if (userGroup) {
+      fetchUnreadSwapRequestsCount();
+    }
+  }, [userGroup]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (userGroup) {
+        fetchUnreadSwapRequestsCount();
+        fetchSwapRequests();
+      }
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [userGroup]);
 
   const renderTopicStatus = useMemo(() => {
     return (topic) => {
@@ -469,7 +545,7 @@ function ClassTopics() {
 
   const renderStudentAvatars = useMemo(() => {
     return (members, registeredGroup) => {
-      if (!Array.isArray(members) || members.length === 0) {
+      if (!members || members.length === 0) {
         return (
           <Tooltip title="Chưa có sinh viên đăng ký">
             <PersonIcon />
@@ -495,15 +571,29 @@ function ClassTopics() {
 
       return (
         <Box sx={{ display: "flex", alignItems: "center" }}>
-          <Button
-            size="small"
-            color="primary"
-            onClick={() => handleOpenGroupDialog(members)}
-            startIcon={<VisibilityIcon />}
-            sx={{ marginRight: 1 }}
-          >
-            {registeredGroup?.group_name || "Xem nhóm"}
-          </Button>
+          {registeredGroup?.group_name ? (
+            <Tooltip title={`Nhóm: ${registeredGroup?.group_name}`}>
+              <Button
+                size="small"
+                color="primary"
+                onClick={() => handleOpenGroupDialog(members)}
+                startIcon={<VisibilityIcon />}
+                sx={{ marginRight: 1 }}
+              >
+                {registeredGroup?.group_name}
+              </Button>
+            </Tooltip>
+          ) : (
+            <Button
+              size="small"
+              color="primary"
+              onClick={() => handleOpenGroupDialog(members)}
+              startIcon={<VisibilityIcon />}
+              sx={{ marginRight: 1 }}
+            >
+              Xem nhóm
+            </Button>
+          )}
           {members.length <= maxAvatars ? (
             avatarGroup
           ) : (
@@ -526,7 +616,11 @@ function ClassTopics() {
   if (!currentClass && !loading)
     return <Typography variant="body1">Không tìm thấy lớp học.</Typography>;
 
-  if (user.role === "lecturer" && currentClass.lecturer_id !== user.id) {
+  if (
+    !loading &&
+    user.role === "lecturer" &&
+    currentClass.lecturer_id !== user.id
+  ) {
     return (
       <Alert severity="error">
         Bạn không phải là giảng viên của lớp học này.
@@ -552,6 +646,25 @@ function ClassTopics() {
             <Skeleton />
           )}
         </Typography>
+        <Box sx={{ display: "flex", alignItems: "center" }}>
+          {user?.role === "student" && userGroup && (
+            <Tooltip title="Yêu cầu trao đổi đề tài">
+              <Badge
+                badgeContent={unreadSwapRequestsCount}
+                color="error"
+                overlap="circular"
+              >
+                <IconButton
+                  color="primary"
+                  onClick={handleOpenSwapRequestsDialog}
+                  sx={{ marginRight: 2 }}
+                >
+                  <NotificationsIcon />
+                </IconButton>
+              </Badge>
+            </Tooltip>
+          )}
+        </Box>
         {user?.role === "lecturer" && (
           <Button
             variant="contained"
@@ -563,14 +676,6 @@ function ClassTopics() {
           </Button>
         )}
       </Box>
-      {(registerStatus.error || registerStatus.success) && (
-        <Alert
-          severity={registerStatus.error ? "error" : "success"}
-          sx={{ mb: 2 }}
-        >
-          {registerStatus.error || registerStatus.success}
-        </Alert>
-      )}
       {user?.role === "student" && !userGroup && (
         <Alert
           severity="info"
@@ -763,7 +868,6 @@ function ClassTopics() {
                         </Typography>
                         {renderStudentAvatars(
                           topic.student_group_members,
-                          handleOpenGroupDialog,
                           topic.registered_group
                         )}
                       </Stack>
@@ -773,25 +877,6 @@ function ClassTopics() {
                       </Typography>
                     )}
                   </Stack>
-                  {user?.role === "student" &&
-                    !topic.registeredByUser &&
-                    topic.registered_group && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        color="primary"
-                        startIcon={<SwapHorizIcon />}
-                        onClick={() => handleRequestSwap(topic, userGroup)}
-                        disabled={
-                          registerStatus.loading ||
-                          !userGroup ||
-                          topic.approval_status !== "approved" ||
-                          moment().isAfter(topic.registration_deadline)
-                        }
-                      >
-                        Yêu cầu trao đổi
-                      </Button>
-                    )}
                 </CardContent>
 
                 <CardActions
@@ -877,7 +962,10 @@ function ClassTopics() {
                       topic={topic}
                       user={user}
                       handleRegisterTopic={handleRegisterTopic}
-                      registerLoading={registerStatus.loading}
+                      handleCancelRegistration={handleCancelRegistration}
+                      registerLoading={registerLoading}
+                      userGroup={userGroup}
+                      handleRequestSwap={handleRequestSwap}
                     />
                   </Box>
                 </CardActions>
@@ -888,17 +976,182 @@ function ClassTopics() {
       )}
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={6000}
+        autoHideDuration={3000}
         onClose={handleSnackbarClose}
-        message={snackbarMessage}
-        severity={snackbarSeverity}
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-      />
+      >
+        {snackbarSeverity ? (
+          <Alert
+            onClose={handleSnackbarClose}
+            severity={snackbarSeverity}
+            sx={{ width: "100%" }}
+          >
+            {snackbarMessage}
+          </Alert>
+        ) : (
+          snackbarMessage
+        )}
+      </Snackbar>
       <GroupDialog
         open={openGroupDialog}
         onClose={handleCloseGroupDialog}
         members={selectedGroup}
       />
+      <Dialog
+        open={openSwapRequestsDialog}
+        onClose={handleCloseSwapRequestsDialog}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>
+          <Typography variant="h6" component="div">
+            Yêu cầu trao đổi đề tài
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers>
+          {loadingSwapRequests ? (
+            <Box sx={{ display: "flex", justifyContent: "center", my: 2 }}>
+              <CircularProgress />
+            </Box>
+          ) : swapRequests.length > 0 ? (
+            <List>
+              {swapRequests.map((request) => {
+                const requestingGroupMembers =
+                  request.requesting_group?.student_group_members || [];
+                const requestedGroupMembers =
+                  request.requested_group?.student_group_members || [];
+                return (
+                  <ListItem key={request.id}>
+                    <ListItemText
+                      primary={
+                        <React.Fragment>
+                          <Typography
+                            component="span"
+                            variant="body1"
+                            color="text.primary"
+                          >
+                            Nhóm{" "}
+                          </Typography>
+                          <Typography
+                            component="span"
+                            variant="body1"
+                            color="primary"
+                          >
+                            {request.requesting_group?.group_name ??
+                              (request.requesting_group_id === userGroup.id
+                                ? "của bạn"
+                                : request.requesting_group_id)}{" "}
+                          </Typography>
+                          <Typography
+                            component="span"
+                            variant="body1"
+                            color="text.primary"
+                          >
+                            đang yêu cầu trao đổi đề tài{" "}
+                          </Typography>
+                          <Typography
+                            component="span"
+                            variant="body1"
+                            color="primary"
+                          >
+                            {request.topics.name}{" "}
+                          </Typography>
+                          <Typography
+                            component="span"
+                            variant="body1"
+                            color="text.primary"
+                          >
+                            với nhóm{" "}
+                          </Typography>
+                          <Typography
+                            component="span"
+                            variant="body1"
+                            color="primary"
+                          >
+                            {request.requested_group?.group_name ??
+                              (request.requested_group_id === userGroup.id
+                                ? "của bạn"
+                                : request.requested_group_id)}{" "}
+                          </Typography>
+                          <Typography
+                            component="span"
+                            variant="body1"
+                            color="text.primary"
+                          >
+                            .
+                          </Typography>
+                        </React.Fragment>
+                      }
+                      secondary={
+                        <>
+                          <Typography component="div" variant="body2">
+                            Thành viên nhóm yêu cầu:{" "}
+                            {requestingGroupMembers
+                              .map((member) => member.users.full_name)
+                              .join(", ")}
+                          </Typography>
+                          <Typography component="div" variant="body2">
+                            Thành viên nhóm được yêu cầu:{" "}
+                            {requestedGroupMembers
+                              .map((member) => member.users.full_name)
+                              .join(", ")}
+                          </Typography>
+                          <Typography component="div" variant="body2">
+                            Trạng thái: {request.status}
+                          </Typography>
+                        </>
+                      }
+                    />
+
+                    {userGroup &&
+                      request.requested_group_id === userGroup.id && (
+                        <ListItemSecondaryAction>
+                          {request.status === "pending" && (
+                            <>
+                              <Tooltip title="Chấp nhận">
+                                <IconButton
+                                  edge="end"
+                                  aria-label="approve"
+                                  onClick={() => handleApproveSwap(request)}
+                                  disabled={processingSwap}
+                                >
+                                  {processingSwap ? (
+                                    <CircularProgress size={24} />
+                                  ) : (
+                                    <CheckCircleIcon color="success" />
+                                  )}
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Từ chối">
+                                <IconButton
+                                  edge="end"
+                                  aria-label="reject"
+                                  onClick={() => handleRejectSwap(request)}
+                                  disabled={processingSwap}
+                                >
+                                  {processingSwap ? (
+                                    <CircularProgress size={24} />
+                                  ) : (
+                                    <CancelIcon color="error" />
+                                  )}
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                        </ListItemSecondaryAction>
+                      )}
+                  </ListItem>
+                );
+              })}
+            </List>
+          ) : (
+            <Typography>Không có yêu cầu trao đổi đề tài nào.</Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseSwapRequestsDialog}>Đóng</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 }

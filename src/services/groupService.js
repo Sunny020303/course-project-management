@@ -30,7 +30,7 @@ export const getGroup = async (studentId, classId) => {
   try {
     const { data, error } = await supabase
       .from("student_group_members")
-      .select(`*, student_groups!inner(*)`)
+      .select(`*, student_groups!inner(*, topics(*))`)
       .eq("student_id", studentId)
       .eq("student_groups.class_id", classId)
       .single();
