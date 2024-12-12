@@ -12,6 +12,8 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  CircularProgress,
+  Button,
 } from "@mui/material";
 import {
   Notifications as NotificationsIcon,
@@ -23,37 +25,61 @@ import moment from "moment";
 import { useAuth } from "../context/AuthContext";
 import supabase from "../services/supabaseClient";
 
+const PAGE_SIZE = 10;
+
 function Notifications() {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const { user } = useAuth();
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
 
-  const fetchNotifications = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+  const fetchNotifications = useCallback(
+    async (page) => {
+      setLoading(true);
+      try {
+        const from = (page - 1) * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
+        const {
+          data,
+          error: fetchError,
+          count,
+        } = await supabase
+          .from("notifications")
+          .select("*", { count: "estimated" })
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .range(from, to);
 
-      if (error) throw error;
-      setNotifications(data);
-    } catch (error) {
-      setError(error.message);
-      console.error("Error fetching notifications:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+        if (fetchError) throw fetchError;
+
+        if (error) {
+          setError(error.message);
+        } else {
+          setError(null);
+          setNotifications((prevNotifications) =>
+            page === 1 ? data : [...prevNotifications, ...data]
+          );
+          setHasMore(data.length === PAGE_SIZE);
+          setPage(page + 1);
+        }
+      } catch (error) {
+        setError(error.message);
+        console.error("Error fetching notifications:", error);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
   useEffect(() => {
     if (user) {
-      fetchNotifications();
+      fetchNotifications(1);
 
-      const notificationsSubscription = supabase
+      const notificationListener = supabase
         .channel("notifications")
         .on(
           "postgres_changes",
@@ -64,13 +90,13 @@ function Notifications() {
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
-            fetchNotifications();
+            fetchNotifications(1);
           }
         )
         .subscribe();
 
       return () => {
-        supabase.removeChannel(notificationsSubscription);
+        supabase.removeChannel(notificationListener);
       };
     }
   }, [user, fetchNotifications]);
@@ -83,7 +109,13 @@ function Notifications() {
         .eq("id", id);
 
       if (error) throw error;
-      fetchNotifications();
+      setNotifications(
+        notifications.map((notification) =>
+          notification.id === id
+            ? { ...notification, is_read: true }
+            : notification
+        )
+      );
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -95,6 +127,10 @@ function Notifications() {
 
   const handleClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleLoadMore = () => {
+    fetchNotifications(page);
   };
 
   const open = Boolean(anchorEl);
@@ -121,49 +157,72 @@ function Notifications() {
           vertical: "top",
           horizontal: "right",
         }}
+        PaperProps={{ style: { maxHeight: "400px", width: "350px" } }}
       >
         {loading ? (
-          <MenuItem>Đang tải...</MenuItem>
+          <MenuItem>
+            <CircularProgress size={24} />
+          </MenuItem>
         ) : error ? (
-          <MenuItem>Lỗi: {error}</MenuItem>
+          <MenuItem>
+            <Typography color="error">Lỗi: {error}</Typography>
+          </MenuItem>
         ) : notifications.length === 0 ? (
           <MenuItem>Không có thông báo mới.</MenuItem>
         ) : (
           notifications.map((notification) => (
-            <MenuItem
-              key={notification.id}
-              onClick={() => handleMarkAsRead(notification.id)}
-              sx={{
-                backgroundColor: notification.is_read
-                  ? "transparent"
-                  : "#e3f2fd",
-              }}
-            >
-              <ListItemAvatar>
-                <Avatar>
-                  {notification.type === "swap_request" && <SwapHorizIcon />}
-                  {notification.type === "swap_approved" && <CheckCircleIcon />}
-                  {notification.type === "swap_rejected" && <CancelIcon />}
-                </Avatar>
-              </ListItemAvatar>
-              <ListItemText
-                primary={notification.message}
-                secondary={moment(notification.created_at).fromNow()}
-              />
-              {!notification.is_read && (
-                <ListItemSecondaryAction>
-                  <IconButton
-                    edge="end"
-                    aria-label="mark as read"
-                    onClick={() => handleMarkAsRead(notification.id)}
-                    size="small"
-                  >
-                    <CheckCircleIcon fontSize="small" />
-                  </IconButton>
-                </ListItemSecondaryAction>
-              )}
-            </MenuItem>
+            <React.Fragment key={notification.id}>
+              <MenuItem
+                onClick={() => handleMarkAsRead(notification.id)}
+                sx={{
+                  whiteSpace: "normal",
+                  backgroundColor: notification.is_read
+                    ? "transparent"
+                    : "#e3f2fd",
+                }}
+              >
+                <ListItemAvatar>
+                  <Avatar>
+                    {notification.type === "swap_request" && <SwapHorizIcon />}
+                    {notification.type === "swap_approved" && (
+                      <CheckCircleIcon />
+                    )}
+                    {notification.type === "swap_rejected" && <CancelIcon />}
+                  </Avatar>
+                </ListItemAvatar>
+                <ListItemText
+                  primary={
+                    <Typography variant="body1" sx={{ wordWrap: "break-word" }}>
+                      {notification.message}
+                    </Typography>
+                  }
+                  secondary={moment(notification.created_at).fromNow()}
+                />
+                {!notification.is_read && (
+                  <ListItemSecondaryAction>
+                    <IconButton
+                      edge="end"
+                      aria-label="mark as read"
+                      onClick={() => handleMarkAsRead(notification.id)}
+                      size="small"
+                    >
+                      <CheckCircleIcon fontSize="small" />
+                    </IconButton>
+                  </ListItemSecondaryAction>
+                )}
+              </MenuItem>
+              <Divider />
+            </React.Fragment>
           ))
+        )}
+        {hasMore && (
+          <MenuItem onClick={handleLoadMore} sx={{ justifyContent: "center" }}>
+            {loading ? (
+              <CircularProgress size={24} />
+            ) : (
+              <Button>Xem thêm</Button>
+            )}
+          </MenuItem>
         )}
       </Menu>
     </>

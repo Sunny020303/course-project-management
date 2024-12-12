@@ -36,7 +36,7 @@ export default function Header() {
           </Typography>
         </div>
         {user && (
-          <>
+          <div style={{ display: "flex", alignItems: "center" }}>
             <Notifications />
             <IconButton
               color="primary"
@@ -45,7 +45,7 @@ export default function Header() {
             >
               <LogoutIcon />
             </IconButton>
-          </>
+          </div>
         )}
       </Toolbar>
     </AppBar>

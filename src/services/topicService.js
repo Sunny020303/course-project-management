@@ -134,11 +134,18 @@ export const requestTopicSwap = async (requestingGroup, requestedGroup) => {
     });
     if (error) throw error;
 
+    const { data: classData, error: classErr } = await supabase
+      .from("classes")
+      .select("name, class_code")
+      .eq("id", requestedGroup.topics.class_id)
+      .single();
+    if (classErr) throw classErr;
+
     requestedGroup.student_group_members.forEach((member) => {
       createNotification(
         member.student_id,
         "swap_request",
-        `Nhóm ${requestingGroup.group_name} đã yêu cầu trao đổi đề tài ${requestingGroup.topics.name} với nhóm của bạn.`
+        `Có 1 nhóm ở lớp ${classData.name} đã yêu cầu trao đổi đề tài ${requestingGroup.topics.name} với nhóm của bạn.`
       );
     });
     return { error: null };
@@ -163,6 +170,23 @@ export const getTopicSwapRequests = async (groupId) => {
     return { data, error: null };
   } catch (error) {
     console.error("Error fetching topic swap requests:", error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const getUnreadSwapRequests = async (groupId) => {
+  try {
+    const { data, error } = await supabase
+      .from("topic_swap_requests")
+      .select("id", { count: "exact" })
+      .eq("status", "pending")
+      .eq("requested_group_id", groupId)
+      .eq("read", false);
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error fetching unread swap requests count:", error);
     return { data: null, error: error.message };
   }
 };
