@@ -12,6 +12,7 @@ import {
   rejectTopicSwap,
   cancelTopicRegistration,
   markAllSwapRequestsAsRead,
+  subscribeToTopicSwapRequests,
 } from "../../services/topicService";
 import { getClassDetails } from "../../services/classService";
 import { useAuth } from "../../context/AuthContext";
@@ -154,6 +155,7 @@ function ClassTopics() {
       const { data, error } = await getTopicSwapRequests(userGroup.id);
       if (error) throw error;
 
+      fetchUnreadSwapRequestsCount();
       setSwapRequests(data);
     } catch (error) {
       console.error("Error fetching swap requests:", error);
@@ -396,6 +398,7 @@ function ClassTopics() {
       if (requestError) throw requestError;
 
       showSnackbar("Đã gửi yêu cầu trao đổi đề tài.", "success");
+      fetchSwapRequests();
     } catch (error) {
       console.error("Error requesting topic swap:", error);
       showSnackbar("Lỗi khi gửi yêu cầu trao đổi.", "error");
@@ -427,6 +430,7 @@ function ClassTopics() {
       const { error } = await rejectTopicSwap(request);
       if (error) throw error;
 
+      await fetchTopics();
       await fetchSwapRequests();
       showSnackbar("Đã từ chối yêu cầu trao đổi đề tài.", "success");
     } catch (error) {
@@ -489,28 +493,25 @@ function ClassTopics() {
   }, [currentClass, fetchTopics]);
 
   useEffect(() => {
-    fetchSwapRequests();
-  }, [fetchSwapRequests]);
+    let unsubscribe;
 
-  useEffect(() => {
-    if (userGroup) {
-      fetchUnreadSwapRequestsCount();
+    if (user && userGroup) {
+      unsubscribe = subscribeToTopicSwapRequests(
+        userGroup.id,
+        fetchSwapRequests,
+        showSnackbar
+      );
     }
-  }, [userGroup]);
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (userGroup) {
-        fetchUnreadSwapRequestsCount();
-        fetchSwapRequests();
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
       }
-    }, 30000);
+    };
+  }, [user, userGroup, fetchSwapRequests]);
 
-    return () => clearInterval(intervalId);
-  }, [userGroup]);
-
-  const renderTopicStatus = useMemo(() => {
-    return (topic) => {
+  const renderTopicStatus = useMemo(
+    () => (topic) => {
       switch (topic.approval_status) {
         case "approved":
           return (
@@ -540,11 +541,12 @@ function ClassTopics() {
             />
           );
       }
-    };
-  }, []);
+    },
+    []
+  );
 
-  const renderStudentAvatars = useMemo(() => {
-    return (members, registeredGroup) => {
+  const renderStudentAvatars = useMemo(
+    () => (members, registeredGroup) => {
       if (!members || members.length === 0) {
         return (
           <Tooltip title="Chưa có sinh viên đăng ký">
@@ -577,7 +579,7 @@ function ClassTopics() {
                 size="small"
                 color="primary"
                 onClick={() => handleOpenGroupDialog(members)}
-                startIcon={<VisibilityIcon />}
+                startIcon={<GroupIcon />}
                 sx={{ marginRight: 1 }}
               >
                 {registeredGroup?.group_name}
@@ -588,7 +590,7 @@ function ClassTopics() {
               size="small"
               color="primary"
               onClick={() => handleOpenGroupDialog(members)}
-              startIcon={<VisibilityIcon />}
+              startIcon={<GroupIcon />}
               sx={{ marginRight: 1 }}
             >
               Xem nhóm
@@ -610,8 +612,9 @@ function ClassTopics() {
           )}
         </Box>
       );
-    };
-  }, [handleOpenGroupDialog]);
+    },
+    [handleOpenGroupDialog]
+  );
 
   if (!currentClass && !loading)
     return <Typography variant="body1">Không tìm thấy lớp học.</Typography>;
@@ -649,19 +652,19 @@ function ClassTopics() {
         <Box sx={{ display: "flex", alignItems: "center" }}>
           {user?.role === "student" && userGroup && (
             <Tooltip title="Yêu cầu trao đổi đề tài">
-              <Badge
-                badgeContent={unreadSwapRequestsCount}
-                color="error"
-                overlap="circular"
+              <IconButton
+                color="primary"
+                onClick={handleOpenSwapRequestsDialog}
+                sx={{ marginRight: 2 }}
               >
-                <IconButton
-                  color="primary"
-                  onClick={handleOpenSwapRequestsDialog}
-                  sx={{ marginRight: 2 }}
+                <Badge
+                  badgeContent={unreadSwapRequestsCount}
+                  color="error"
+                  overlap="circular"
                 >
                   <NotificationsIcon />
-                </IconButton>
-              </Badge>
+                </Badge>
+              </IconButton>
             </Tooltip>
           )}
         </Box>
@@ -794,16 +797,18 @@ function ClassTopics() {
                       gutterBottom
                       sx={{ fontWeight: "bold" }}
                     >
-                      <Link
-                        component={RouterLink}
-                        to={`/topics/details/${topic.id}`}
-                        sx={{
-                          textDecoration: "none",
-                          "&:hover": { textDecoration: "underline" },
-                        }}
-                      >
-                        {topic.name}
-                      </Link>
+                      <Tooltip title={topic.name}>
+                        <Link
+                          component={RouterLink}
+                          to={`/topics/details/${topic.id}`}
+                          sx={{
+                            textDecoration: "none",
+                            "&:hover": { textDecoration: "underline" },
+                          }}
+                        >
+                          {topic.name}
+                        </Link>
+                      </Tooltip>
                     </Typography>
                     <Stack direction="row" alignItems="center" spacing={1}>
                       <SchoolIcon fontSize="small" color="action" />
@@ -1047,7 +1052,7 @@ function ClassTopics() {
                             variant="body1"
                             color="text.primary"
                           >
-                            đang yêu cầu trao đổi đề tài{" "}
+                            muốn trao đổi đề tài{" "}
                           </Typography>
                           <Typography
                             component="span"

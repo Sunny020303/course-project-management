@@ -265,3 +265,60 @@ export const markAllSwapRequestsAsRead = async (groupId) => {
     return { error: error.message };
   }
 };
+
+export const subscribeToTopicSwapRequests = (
+  groupId,
+  updateSwapRequests,
+  showSnackbar
+) => {
+  const channel = supabase
+    .channel(`topic_swap_requests:group_id=${groupId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "topic_swap_requests",
+        filter: `requested_group_id.eq.${groupId}`,
+      },
+      async (payload) => {
+        const newRequest = payload.new;
+
+        try {
+          const { data: topicData, error: topicError } = await supabase
+            .from("topics")
+            .select("name")
+            .eq("id", newRequest.topic_id)
+            .single();
+          if (topicError) throw topicError;
+
+          const { data: requestingGroupData, error: requestingGroupError } =
+            await supabase
+              .from("student_groups")
+              .select("group_name")
+              .eq("id", newRequest.requesting_group_id)
+              .single();
+          if (requestingGroupError) throw requestingGroupError;
+
+          showSnackbar(
+            `Nhóm ${requestingGroupData.group_name} đã yêu cầu trao đổi đề tài "${topicData.name}" với nhóm của bạn.`,
+            "info"
+          );
+
+          if (typeof updateSwapRequests === "function") {
+            updateSwapRequests();
+          }
+        } catch (error) {
+          console.error(
+            "Error fetching additional details for swap request:",
+            error
+          );
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+};

@@ -2,6 +2,7 @@ import * as React from "react";
 import { AppBar, Toolbar, Typography, IconButton } from "@mui/material";
 import { useAuth } from "../../context/AuthContext";
 import LogoutIcon from "@mui/icons-material/Logout";
+import Notifications from "../Notifications";
 
 export default function Header() {
   const { user, logout } = useAuth();
@@ -16,7 +17,7 @@ export default function Header() {
       position="static"
       sx={{ bgcolor: "#f8f9fa", boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)" }}
     >
-      <Toolbar>
+      <Toolbar sx={{ justifyContent: "space-between" }}>
         <div
           style={{
             display: "flex",
@@ -35,9 +36,16 @@ export default function Header() {
           </Typography>
         </div>
         {user && (
-          <IconButton color="primary" onClick={handleLogout} title="Đăng xuất">
-            <LogoutIcon />
-          </IconButton>
+          <>
+            <Notifications />
+            <IconButton
+              color="primary"
+              onClick={handleLogout}
+              title="Đăng xuất"
+            >
+              <LogoutIcon />
+            </IconButton>
+          </>
         )}
       </Toolbar>
     </AppBar>
