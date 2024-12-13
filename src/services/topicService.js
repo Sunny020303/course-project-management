@@ -124,7 +124,11 @@ export const deleteTopic = async (topicId) => {
   }
 };
 
-export const requestTopicSwap = async (requestingGroup, requestedGroup) => {
+export const requestTopicSwap = async (
+  requestingGroup,
+  requestedGroup,
+  classId
+) => {
   try {
     const { error } = await supabase.from("topic_swap_requests").insert({
       topic_id: requestingGroup.topics.id,
@@ -137,7 +141,7 @@ export const requestTopicSwap = async (requestingGroup, requestedGroup) => {
     const { data: classData, error: classErr } = await supabase
       .from("classes")
       .select("name, class_code")
-      .eq("id", requestedGroup.topics.class_id)
+      .eq("id", classId)
       .single();
     if (classErr) throw classErr;
 
@@ -151,6 +155,21 @@ export const requestTopicSwap = async (requestingGroup, requestedGroup) => {
     return { error: null };
   } catch (error) {
     console.error("Error requesting topic swap:", error);
+    return { error: error.message };
+  }
+};
+
+export const cancelTopicSwap = async (requestId) => {
+  try {
+    const { error } = await supabase
+      .from("topic_swap_requests")
+      .delete()
+      .eq("id", requestId);
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error("Error cancelling topic swap:", error);
     return { error: error.message };
   }
 };
@@ -303,7 +322,7 @@ export const subscribeToTopicSwapRequests = (
         event: "INSERT",
         schema: "public",
         table: "topic_swap_requests",
-        filter: `requested_group_id.eq.${groupId}`,
+        filter: `requested_group_id.eq.${groupId} or requesting_group_id.eq.${groupId}`,
       },
       async (payload) => {
         const newRequest = payload.new;
@@ -324,14 +343,13 @@ export const subscribeToTopicSwapRequests = (
               .single();
           if (requestingGroupError) throw requestingGroupError;
 
-          showSnackbar(
-            `Nhóm ${requestingGroupData.group_name} đã yêu cầu trao đổi đề tài "${topicData.name}" với nhóm của bạn.`,
-            "info"
-          );
-
-          if (typeof updateSwapRequests === "function") {
-            updateSwapRequests();
+          if (newRequest.requested_group_id === groupId) {
+            showSnackbar(
+              `Nhóm ${requestingGroupData.group_name} đã yêu cầu trao đổi đề tài "${topicData.name}" với nhóm của bạn.`,
+              "info"
+            );
           }
+          await updateSwapRequests();
         } catch (error) {
           console.error(
             "Error fetching additional details for swap request:",

@@ -87,7 +87,7 @@ function ClassTopics() {
     };
   }, []);
 
-  const fetchUserGroup = async () => {
+  const fetchUserGroup = useCallback(async () => {
     if (user) {
       try {
         const { data, error } = await getGroup(user.id, classId);
@@ -97,7 +97,7 @@ function ClassTopics() {
         console.error("Error getting user group", error);
       }
     }
-  };
+  }, [classId, user]);
 
   const fetchTopics = useCallback(async () => {
     setLoading(true);
@@ -297,13 +297,18 @@ function ClassTopics() {
   useEffect(() => {
     let unsubscribe;
 
-    if (user && userGroup) {
-      unsubscribe = subscribeToTopicSwapRequests(
-        userGroup.id,
-        fetchSwapRequests,
-        showSnackbar
-      );
-    }
+    const fetchInitialData = async () => {
+      if (user && userGroup) {
+        await fetchSwapRequests();
+        unsubscribe = subscribeToTopicSwapRequests(
+          userGroup.id,
+          fetchSwapRequests,
+          showSnackbar
+        );
+      }
+    };
+
+    fetchInitialData();
 
     return () => {
       if (unsubscribe) {
@@ -487,6 +492,14 @@ function ClassTopics() {
                     <TopicCard
                       topic={topic}
                       userGroup={userGroup}
+                      swapRequests={swapRequests}
+                      swapRequestId={
+                        swapRequests.find(
+                          (swapRequest) =>
+                            swapRequest.requesting_group_id === userGroup.id &&
+                            swapRequest.status === "pending"
+                        )?.id
+                      }
                       showSnackbar={showSnackbar}
                       fetchTopics={fetchTopics}
                       fetchUserGroup={fetchUserGroup}
@@ -505,6 +518,7 @@ function ClassTopics() {
                 <TopicCard
                   topic={topic}
                   userGroup={userGroup}
+                  swapRequests={swapRequests}
                   showSnackbar={showSnackbar}
                   fetchTopics={fetchTopics}
                   fetchUserGroup={fetchUserGroup}

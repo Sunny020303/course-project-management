@@ -36,18 +36,15 @@ import { Link as RouterLink } from "react-router-dom";
 import moment from "moment";
 import RegistrationStatus from "./RegistrationStatus";
 import {
-  registerTopic,
   deleteTopic,
   approveTopic,
   rejectTopic,
-  requestTopicSwap,
-  cancelTopicRegistration,
 } from "../../services/topicService";
-import { createGroup } from "../../services/groupService";
 
 const TopicCard = React.memo(function TopicCard({
   topic,
   userGroup,
+  swapRequests,
   showSnackbar,
   fetchTopics,
   fetchUserGroup,
@@ -58,81 +55,12 @@ const TopicCard = React.memo(function TopicCard({
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [registerLoading, setRegisterLoading] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [approvingTopic, setApprovingTopic] = useState(null);
   const [deletingTopic, setDeletingTopic] = useState(null);
 
   const open = Boolean(anchorEl);
-
-  const handleRegisterTopic = async (topic) => {
-    setRegisterLoading(true);
-
-    try {
-      if (!user) {
-        navigate("/login", { replace: true });
-        return;
-      }
-
-      let groupId = null;
-      if (!userGroup) {
-        const { data: newGroup, error: createGroupError } = await createGroup(
-          classId,
-          [user.id]
-        );
-        if (createGroupError) throw createGroupError;
-        groupId = newGroup.id;
-      } else {
-        groupId = userGroup.id;
-        if (userGroup.members.length > topic.max_members) {
-          showSnackbar(
-            `Nhóm của bạn có ${userGroup.members.length} thành viên, vượt quá số lượng tối đa ${topic.max_members} cho đề tài này.`,
-            "error"
-          );
-          return;
-        }
-      }
-      const { error: registerError } = await registerTopic(topic.id, groupId);
-      if (registerError) throw registerError;
-      await fetchTopics();
-      await fetchUserGroup();
-      showSnackbar("Đăng ký đề tài thành công!", "success");
-    } catch (error) {
-      console.error("Error registering topic:", error);
-      if (error.code === "23505") {
-        showSnackbar("Đề tài này đã có nhóm đăng ký.", "error");
-      } else if (error.code === "23503") {
-        showSnackbar("Lớp học không hợp lệ", "error");
-      } else {
-        showSnackbar(
-          error.message || "Đã có lỗi xảy ra. Vui lòng thử lại.",
-          "error"
-        );
-      }
-    } finally {
-      setRegisterLoading(true);
-    }
-  };
-
-  const handleCancelRegistration = async (topic) => {
-    try {
-      if (!userGroup || !userGroup.topic_id) {
-        showSnackbar("Nhóm của bạn chưa đăng ký đề tài nào.", "error");
-        return;
-      }
-
-      const { error } = await cancelTopicRegistration(userGroup.id);
-      if (error) throw error;
-
-      await fetchTopics();
-      await fetchUserGroup();
-      showSnackbar("Hủy đăng ký đề tài thành công.", "success");
-    } catch (error) {
-      console.error("Error canceling topic registration:", error);
-      showSnackbar("Hủy đăng ký đề tài thất bại.", "error");
-    }
-  };
 
   const handleClick = (event, topic) => {
     setAnchorEl(event.currentTarget);
@@ -197,27 +125,6 @@ const TopicCard = React.memo(function TopicCard({
     } finally {
       setDeletingTopic(null);
       handleClose();
-    }
-  };
-
-  const handleRequestSwap = async (topic) => {
-    try {
-      if (!userGroup.topic_id) {
-        showSnackbar("Nhóm của bạn chưa đăng ký đề tài nào.", "error");
-        return;
-      }
-
-      const { error: requestError } = await requestTopicSwap(
-        userGroup,
-        topic.registered_group
-      );
-      if (requestError) throw requestError;
-
-      showSnackbar("Đã gửi yêu cầu trao đổi đề tài.", "success");
-      await fetchSwapRequests();
-    } catch (error) {
-      console.error("Error requesting topic swap:", error);
-      showSnackbar("Lỗi khi gửi yêu cầu trao đổi.", "error");
     }
   };
 
@@ -484,12 +391,12 @@ const TopicCard = React.memo(function TopicCard({
         <Box>
           <RegistrationStatus
             topic={topic}
-            user={user}
-            handleRegisterTopic={handleRegisterTopic}
-            handleCancelRegistration={handleCancelRegistration}
-            registerLoading={registerLoading}
             userGroup={userGroup}
-            handleRequestSwap={handleRequestSwap}
+            swapRequests={swapRequests}
+            showSnackbar={showSnackbar}
+            fetchTopics={fetchTopics}
+            fetchUserGroup={fetchUserGroup}
+            fetchSwapRequests={fetchSwapRequests}
           />
         </Box>
       </CardActions>

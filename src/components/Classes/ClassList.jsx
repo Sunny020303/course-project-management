@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getClassesByUser } from "../../services/classService";
 import { useAuth } from "../../context/AuthContext";
@@ -31,7 +31,7 @@ function ClassList() {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [expanded, setExpanded] = useState(false);
-  const [isAdmin,setIsAdmin]=useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false);
@@ -47,8 +47,7 @@ function ClassList() {
 
   useEffect(() => {
     if (!user) navigate("/login", { replace: true });
-    else
-    if (user.role === "admin") {
+    else if (user.role === "admin") {
       setIsAdmin(true);
     }
   }, [user, navigate]);
@@ -57,32 +56,27 @@ function ClassList() {
     if (user) return await getClassesByUser(user);
   }, [user]);
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     setLoading(true);
     try {
-      const cachedClasses = sessionStorage.getItem(`classes-${user?.id}`);
-      if (cachedClasses) {
-        setClassesBySemester(JSON.parse(cachedClasses));
-      } else {
-        const { data, error } = await classesData;
+      const { data, error } = await classesData;
 
-        if (error) {
-          throw error;
-        }
-
-        // Group lớp học theo học kỳ
-        const groupedClasses = data.reduce((acc, c) => {
-          acc[c.semester] = acc[c.semester] || [];
-          acc[c.semester].push(c);
-          return acc;
-        }, {});
-
-        setClassesBySemester(groupedClasses);
-        sessionStorage.setItem(
-          `classes-${user?.id}`,
-          JSON.stringify(groupedClasses)
-        );
+      if (error) {
+        throw error;
       }
+
+      // Group lớp học theo học kỳ
+      const groupedClasses = data.reduce((acc, c) => {
+        acc[c.semester] = acc[c.semester] || [];
+        acc[c.semester].push(c);
+        return acc;
+      }, {});
+
+      setClassesBySemester(groupedClasses);
+      sessionStorage.setItem(
+        `classes-${user?.id}`,
+        JSON.stringify(groupedClasses)
+      );
     } catch (error) {
       if (error.message === "PGRST116") {
         // No data found
@@ -95,11 +89,11 @@ function ClassList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [classesData, user]);
 
   useEffect(() => {
     fetchClasses();
-  }, [classesData]);
+  }, [classesData, fetchClasses]);
 
   // Hàm lọc danh sách lớp học
   const filteredClassesBySemester = useMemo(() => {
@@ -125,15 +119,26 @@ function ClassList() {
 
   return (
     <Container maxWidth="md" sx={{ flexGrow: 1, marginTop: 2 }}>
-      <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-        <Typography variant="h5" >
-          Danh sách lớp học
-        </Typography>
-        {isAdmin && <Button variant="outlined" onClick={() => {
-          navigate("/createclass")
-        }}>
-          <Add sx={{ marginRight: 1 }} /> Thêm lớp học mới
-        </Button>}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 2,
+        }}
+      >
+        <Typography variant="h5">Danh sách lớp học</Typography>
+        {isAdmin && (
+          <Button
+            variant="outlined"
+            onClick={() => {
+              navigate("/createclass");
+            }}
+          >
+            <Add sx={{ marginRight: 1 }} /> Thêm lớp học mới
+          </Button>
+        )}
       </Box>
 
       <TextField
