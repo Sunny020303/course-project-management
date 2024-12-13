@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   ListItemIcon,
-  ListItemSecondaryAction,
   Avatar,
   Typography,
   Divider,
@@ -27,6 +26,7 @@ import moment from "moment";
 import { useAuth } from "../context/AuthContext";
 import * as notificationService from "../services/notificationService";
 import supabase from "../services/supabaseClient";
+import { Howl } from "howler";
 
 const PAGE_SIZE = 10;
 
@@ -39,19 +39,28 @@ function Notifications() {
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
 
+  const sound = useMemo(
+    () =>
+      new Howl({
+        src: ["/notification.mp3"],
+      }),
+    []
+  );
+
+  const playNotificationSound = useCallback(() => {
+    sound.play();
+  }, [sound]);
+
   const fetchNotifications = useCallback(
     async (page = 1) => {
       setLoading(true);
       try {
-        const {
-          data,
-          error: fetchError,
-          count,
-        } = await notificationService.fetchNotifications(
-          user.id,
-          page,
-          PAGE_SIZE
-        );
+        const { data, error: fetchError } =
+          await notificationService.fetchNotifications(
+            user.id,
+            page,
+            PAGE_SIZE
+          );
 
         if (fetchError) throw fetchError;
 
@@ -62,6 +71,15 @@ function Notifications() {
           setNotifications((prevNotifications) =>
             page === 1 ? data : [...prevNotifications, ...data]
           );
+          if (data && data.length > 0) {
+            const newNotifications = data.filter(
+              (n) =>
+                !n.is_read && !notifications.some((oldN) => oldN.id === n.id)
+            );
+            if (newNotifications.length > 0) {
+              playNotificationSound();
+            }
+          }
           setHasMore(data.length === PAGE_SIZE);
           setPage(page + 1);
         }
@@ -72,7 +90,7 @@ function Notifications() {
         setLoading(false);
       }
     },
-    [user, error]
+    [user, error, notifications, playNotificationSound]
   );
 
   useEffect(() => {

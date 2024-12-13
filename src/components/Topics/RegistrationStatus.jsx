@@ -142,7 +142,7 @@ function RegistrationStatus({
           swapRequest.status === "pending"
       )?.id || null
     );
-  }, [swapRequests, userGroup]);
+  }, [swapRequests, topic.registered_group?.id, userGroup]);
 
   if (!user || user.role !== "student") {
     return null;

@@ -6,18 +6,12 @@ import {
   Typography,
   Box,
   Container,
-  CircularProgress,
-  Alert,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   TextField,
   InputAdornment,
   IconButton,
   Skeleton,
   Button,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import SearchIcon from "@mui/icons-material/Search";
 import { Add } from "@mui/icons-material";
 import ClassListItems from "./ClassListItems";
@@ -30,12 +24,7 @@ function ClassList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [expanded, setExpanded] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-
-  const handleChange = (panel) => (event, isExpanded) => {
-    setExpanded(isExpanded ? panel : false);
-  };
 
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
