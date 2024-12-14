@@ -71,15 +71,6 @@ function Notifications() {
           setNotifications((prevNotifications) =>
             page === 1 ? data : [...prevNotifications, ...data]
           );
-          if (data && data.length > 0) {
-            const newNotifications = data.filter(
-              (n) =>
-                !n.is_read && !notifications.some((oldN) => oldN.id === n.id)
-            );
-            if (newNotifications.length > 0) {
-              playNotificationSound();
-            }
-          }
           setHasMore(data.length === PAGE_SIZE);
           setPage(page + 1);
         }
@@ -90,7 +81,7 @@ function Notifications() {
         setLoading(false);
       }
     },
-    [user, error, notifications, playNotificationSound]
+    [user, error]
   );
 
   useEffect(() => {
@@ -109,6 +100,9 @@ function Notifications() {
           },
           (payload) => {
             fetchNotifications(1);
+            if (payload.eventType === "INSERT") {
+              playNotificationSound();
+            }
           }
         )
         .subscribe();
@@ -117,7 +111,7 @@ function Notifications() {
         supabase.removeChannel(notificationListener);
       };
     }
-  }, [user, fetchNotifications]);
+  }, [user, fetchNotifications, playNotificationSound]);
 
   const handleMarkAsRead = async (id) => {
     try {
