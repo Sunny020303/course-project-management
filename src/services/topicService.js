@@ -40,7 +40,7 @@ export const getTopics = async (classId, user) => {
       return {
         ...topic,
         student_group_members: members,
-        registered_group: registeredGroup || null,
+        registered_group: registeredGroup,
         student_ids: members.map((member) => member.student_id),
         registeredByUser,
       };
@@ -145,13 +145,16 @@ export const requestTopicSwap = async (
       .single();
     if (classErr) throw classErr;
 
-    requestedGroup.student_group_members.forEach((member) => {
-      createNotification(
-        member.student_id,
-        "swap_request",
-        `Có 1 nhóm ở lớp ${classData.name} đã yêu cầu trao đổi đề tài ${requestingGroup.topics.name} với nhóm của bạn.`
-      );
-    });
+    const notificationPromises = requestedGroup.student_group_members.map(
+      (member) =>
+        createNotification(
+          member.student_id,
+          "swap_request",
+          `Có 1 nhóm ở lớp ${classData.name} đã yêu cầu trao đổi đề tài ${requestingGroup.topics.name} với nhóm của bạn.`
+        )
+    );
+
+    await Promise.all(notificationPromises);
     return { error: null };
   } catch (error) {
     console.error("Error requesting topic swap:", error);
@@ -251,25 +254,22 @@ export const rejectTopicSwap = async (request) => {
       (member) => member.student_id
     );
 
-    const notificationPromises = [];
-    requestingGroupStudentIds.forEach((studentId) => {
-      notificationPromises.push(
+    const notificationPromises = [
+      ...requestingGroupStudentIds.map((studentId) =>
         createNotification(
           studentId,
           "swap_rejected",
           `Yêu cầu trao đổi đề tài "${request.topics.name}" của bạn đã bị từ chối.`
         )
-      );
-    });
-    requestedGroupStudentIds.forEach((studentId) => {
-      notificationPromises.push(
+      ),
+      ...requestedGroupStudentIds.map((studentId) =>
         createNotification(
           studentId,
           "swap_rejected",
           `Yêu cầu trao đổi đề tài "${request.topics.name}" đã bị từ chối.`
         )
-      );
-    });
+      ),
+    ];
 
     await Promise.all(notificationPromises);
 
@@ -312,6 +312,7 @@ export const markAllSwapRequestsAsRead = async (groupId) => {
 export const subscribeToTopicSwapRequests = (
   groupId,
   updateSwapRequests,
+  updateUnreadCount,
   showSnackbar
 ) => {
   const channel = supabase
@@ -349,7 +350,7 @@ export const subscribeToTopicSwapRequests = (
               "info"
             );
           }
-          await updateSwapRequests();
+          await Promise.all([updateSwapRequests(), updateUnreadCount()]);
         } catch (error) {
           console.error(
             "Error fetching additional details for swap request:",

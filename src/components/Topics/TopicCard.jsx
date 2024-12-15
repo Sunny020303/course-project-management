@@ -31,6 +31,7 @@ import {
   Group as GroupIcon,
   School as SchoolIcon,
   Event as EventIcon,
+  Settings as SettingsIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink } from "react-router-dom";
 import moment from "moment";
@@ -129,8 +130,11 @@ const TopicCard = React.memo(function TopicCard({
   };
 
   const renderStudentAvatars = useMemo(
-    () => (members, registeredGroup) => {
-      if (!members || members.length === 0) {
+    () => (topic) => {
+      if (
+        !topic.student_group_members ||
+        topic.student_group_members.length === 0
+      ) {
         return (
           <Tooltip title="Chưa có sinh viên đăng ký">
             <PersonIcon />
@@ -141,7 +145,7 @@ const TopicCard = React.memo(function TopicCard({
       const maxAvatars = 3;
       const avatarGroup = (
         <AvatarGroup max={maxAvatars}>
-          {members.map((member) => (
+          {topic.student_group_members.map((member) => (
             <Tooltip key={member.student_id} title={member.users.full_name}>
               <Avatar sx={{ bgcolor: "primary.main" }}>
                 {member.users.full_name
@@ -156,39 +160,41 @@ const TopicCard = React.memo(function TopicCard({
 
       return (
         <Box sx={{ display: "flex", alignItems: "center" }}>
-          {registeredGroup?.group_name ? (
-            <Tooltip title={`Nhóm: ${registeredGroup?.group_name}`}>
+          {topic.registered_group?.group_name ? (
+            <Tooltip title={`Nhóm: ${topic.registered_group?.group_name}`}>
               <Button
                 size="small"
                 color="primary"
-                onClick={() => handleOpenGroupDialog(members)}
+                onClick={() => handleOpenGroupDialog(topic)}
                 startIcon={<VisibilityIcon />}
                 sx={{ marginRight: 1 }}
               >
-                {registeredGroup?.group_name}
+                {topic.registered_group?.group_name}
               </Button>
             </Tooltip>
           ) : (
             <Button
               size="small"
               color="primary"
-              onClick={() => handleOpenGroupDialog(members)}
+              onClick={() => handleOpenGroupDialog(topic)}
               startIcon={<VisibilityIcon />}
               sx={{ marginRight: 1 }}
             >
               Xem nhóm
             </Button>
           )}
-          {members.length <= maxAvatars ? (
+          {topic.student_group_members?.length <= maxAvatars ? (
             avatarGroup
           ) : (
             <Tooltip
-              title={members.map((member) => member.users.full_name).join(", ")}
+              title={topic.student_group_members
+                .map((member) => member.users.full_name)
+                .join(", ")}
             >
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 {avatarGroup}
                 <Typography variant="body2" color="text.secondary" ml={1}>
-                  (+{members.length - maxAvatars})
+                  (+{topic.student_group_members.length - maxAvatars})
                 </Typography>
               </Box>
             </Tooltip>
@@ -307,10 +313,7 @@ const TopicCard = React.memo(function TopicCard({
               <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
                 Nhóm:
               </Typography>
-              {renderStudentAvatars(
-                topic.student_group_members,
-                topic.registered_group
-              )}
+              {renderStudentAvatars(topic)}
             </Stack>
           ) : (
             <Typography variant="body2" color="text.secondary" mt={1}>
@@ -336,16 +339,22 @@ const TopicCard = React.memo(function TopicCard({
                 disabled={approvingTopic || deletingTopic}
               >
                 <EditIcon />
+                <Typography variant="body2" sx={{ ml: 0.5 }}>
+                  Chỉnh sửa
+                </Typography>
               </IconButton>
             </Tooltip>
-            <Tooltip title="Tùy chọn">
+            <Tooltip title="Tuỳ chọn">
               <IconButton
-                color="error"
+                color="secondary"
                 size="small"
                 onClick={(event) => handleClick(event, topic)}
                 disabled={deletingTopic || approvingTopic}
               >
-                <MoreVertIcon />
+                <SettingsIcon />
+                <Typography variant="body2" sx={{ ml: 0.5 }}>
+                  Tuỳ chọn
+                </Typography>
               </IconButton>
             </Tooltip>
 

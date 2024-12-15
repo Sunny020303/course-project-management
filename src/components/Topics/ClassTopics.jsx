@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import {
   getTopics,
   getTopicSwapRequests,
@@ -37,10 +37,14 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemAvatar,
   ListItemSecondaryAction,
   Divider,
   Snackbar,
   Badge,
+  Chip,
+  Link,
+  Avatar,
 } from "@mui/material";
 import { Container } from "@mui/system";
 import {
@@ -49,6 +53,9 @@ import {
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   SwapCalls as SwapCallsIcon,
+  SwapHoriz as SwapHorizIcon,
+  Group as GroupIcon,
+  Topic as TopicIcon,
 } from "@mui/icons-material";
 import { getGroup } from "../../services/groupService";
 import TopicCard from "./TopicCard";
@@ -70,7 +77,7 @@ function ClassTopics() {
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [userGroup, setUserGroup] = useState(null);
   const [openGroupDialog, setOpenGroupDialog] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedTopic, setSelectedTopic] = useState(null);
   const [swapRequests, setSwapRequests] = useState([]);
   const [openSwapRequestsDialog, setOpenSwapRequestsDialog] = useState(false);
   const [loadingSwapRequests, setLoadingSwapRequests] = useState(false);
@@ -162,14 +169,14 @@ function ClassTopics() {
     setSnackbarSeverity(severity);
   };
 
-  const handleOpenGroupDialog = (members) => {
-    setSelectedGroup(members);
+  const handleOpenGroupDialog = (topic) => {
+    setSelectedTopic(topic);
     setOpenGroupDialog(true);
   };
 
   const handleCloseGroupDialog = () => {
     setOpenGroupDialog(false);
-    setSelectedGroup(null);
+    setSelectedTopic(null);
   };
 
   const handleSearchChange = (event) => {
@@ -205,9 +212,7 @@ function ClassTopics() {
       const { error } = await approveTopicSwap(request);
       if (error) throw error;
 
-      await fetchTopics();
-      await fetchSwapRequests();
-      await fetchUserGroup();
+      await Promise.all([fetchTopics(), fetchUserGroup(), fetchSwapRequests()]);
       showSnackbar("Trao đổi đề tài thành công.", "success");
     } catch (error) {
       console.error("Error approving topic swap:", error);
@@ -224,8 +229,7 @@ function ClassTopics() {
       const { error } = await rejectTopicSwap(request);
       if (error) throw error;
 
-      await fetchTopics();
-      await fetchSwapRequests();
+      await Promise.all([fetchTopics(), fetchSwapRequests()]);
       showSnackbar("Đã từ chối yêu cầu trao đổi đề tài.", "success");
     } catch (error) {
       console.error("Error rejecting topic swap:", error);
@@ -319,7 +323,29 @@ function ClassTopics() {
 
   useEffect(() => {
     fetchUnreadSwapRequestsCount();
-  }, [user, userGroup, fetchSwapRequests, fetchUnreadSwapRequestsCount]);
+  }, [
+    user,
+    userGroup,
+    swapRequests,
+    fetchSwapRequests,
+    fetchUnreadSwapRequestsCount,
+  ]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (userGroup && !openSwapRequestsDialog) {
+        fetchUnreadSwapRequestsCount();
+        fetchSwapRequests();
+      }
+    }, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [
+    fetchSwapRequests,
+    fetchUnreadSwapRequestsCount,
+    openSwapRequestsDialog,
+    userGroup,
+  ]);
 
   if (!currentClass && !loading)
     return <Typography variant="body1">Không tìm thấy lớp học.</Typography>;
@@ -360,7 +386,7 @@ function ClassTopics() {
               <IconButton
                 color="primary"
                 onClick={handleOpenSwapRequestsDialog}
-                sx={{ marginRight: 2 }}
+                sx={{ mr: 2 }}
               >
                 <Badge
                   badgeContent={unreadSwapRequestsCount}
@@ -551,20 +577,20 @@ function ClassTopics() {
       <GroupDialog
         open={openGroupDialog}
         onClose={handleCloseGroupDialog}
-        members={selectedGroup}
+        topic={selectedTopic}
       />
       <Dialog
         open={openSwapRequestsDialog}
         onClose={handleCloseSwapRequestsDialog}
         fullWidth
-        maxWidth="md"
+        maxWidth="sm"
       >
-        <DialogTitle>
-          <Typography variant="h6" component="div">
+        <DialogTitle sx={{ textAlign: "center" }}>
+          <Typography variant="h5" component="div" gutterBottom>
             Yêu cầu trao đổi đề tài
           </Typography>
         </DialogTitle>
-        <DialogContent dividers>
+        <DialogContent dividers sx={{ padding: 3 }}>
           {loadingSwapRequests ? (
             <Box sx={{ display: "flex", justifyContent: "center", my: 2 }}>
               <CircularProgress />
@@ -577,91 +603,160 @@ function ClassTopics() {
                 const requestedGroupMembers =
                   request.requested_group?.student_group_members || [];
                 return (
-                  <ListItem key={request.id}>
-                    <ListItemText
-                      primary={
-                        <React.Fragment>
-                          <Typography
-                            component="span"
-                            variant="body1"
-                            color="text.primary"
-                          >
-                            Nhóm{" "}
-                          </Typography>
-                          <Typography
-                            component="span"
-                            variant="body1"
+                  <ListItem
+                    key={request.id}
+                    sx={{ flexDirection: "column", alignItems: "flex-start" }}
+                  >
+                    <Box sx={{ width: "100%", mb: 2 }}>
+                      <Typography
+                        variant="body1"
+                        color="text.secondary"
+                        gutterBottom
+                      >
+                        Trạng thái:{" "}
+                        <Chip
+                          label={
+                            request.status === "pending"
+                              ? "Đang chờ"
+                              : request.status === "approved"
+                              ? "Đã chấp nhận"
+                              : "Đã từ chối"
+                          }
+                          color={
+                            request.status === "pending"
+                              ? "primary"
+                              : request.status === "approved"
+                              ? "success"
+                              : "error"
+                          }
+                          size="small"
+                        />
+                      </Typography>
+                      <Box sx={{ width: "100%", mb: 1 }}>
+                        <Typography variant="body1" color="text.secondary">
+                          <TopicIcon
                             color="primary"
-                          >
-                            {request.requesting_group?.group_name ??
-                              (request.requesting_group_id === userGroup.id
-                                ? "của bạn"
-                                : request.requesting_group_id)}{" "}
-                          </Typography>
-                          <Typography
+                            sx={{ verticalAlign: "middle", mr: 1 }}
+                          />
+                          <Box
                             component="span"
-                            variant="body1"
-                            color="text.primary"
+                            sx={{ fontWeight: "bold", mr: 1 }}
                           >
-                            muốn trao đổi đề tài{" "}
-                          </Typography>
-                          <Typography
-                            component="span"
-                            variant="body1"
-                            color="primary"
+                            Đề tài yêu cầu:
+                          </Box>
+                          <Link
+                            component={RouterLink}
+                            to={`/topics/details/${request.topic_id}`}
                           >
-                            {request.topics.name}{" "}
+                            {request.topics.name}
+                          </Link>
+                        </Typography>
+                      </Box>
+                      <Divider sx={{ my: 1 }} />
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            <GroupIcon
+                              color="secondary"
+                              sx={{ verticalAlign: "middle", mr: 1 }}
+                            />
+                            <Box
+                              component="span"
+                              sx={{ fontWeight: "bold", mr: 1 }}
+                            >
+                              Nhóm yêu cầu:
+                            </Box>
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              color="primary"
+                              sx={{ fontWeight: "bold" }}
+                            >
+                              {request.requesting_group?.group_name ||
+                                request.requesting_group_id}
+                            </Typography>
                           </Typography>
-                          <Typography
-                            component="span"
-                            variant="body1"
-                            color="text.primary"
-                          >
-                            với nhóm{" "}
+                          <List dense>
+                            {requestingGroupMembers.map((member) => (
+                              <ListItem key={member.student_id} disablePadding>
+                                <ListItemAvatar>
+                                  <Avatar sx={{ bgcolor: "primary.main" }}>
+                                    {member.users.full_name
+                                      .split(" ")
+                                      .map((name) => name[0])
+                                      .join("")}
+                                  </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText
+                                  primary={member.users.full_name}
+                                  secondary={`Mã số: ${
+                                    member.users.student_code ||
+                                    member.users.lecturer_code ||
+                                    "Không có mã"
+                                  }`}
+                                />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="subtitle2" gutterBottom>
+                            <GroupIcon
+                              color="secondary"
+                              sx={{ verticalAlign: "middle", mr: 1 }}
+                            />
+                            <Box
+                              component="span"
+                              sx={{ fontWeight: "bold", mr: 1 }}
+                            >
+                              Nhóm được yêu cầu:
+                            </Box>
+                            <Typography
+                              component="span"
+                              variant="body2"
+                              color="primary"
+                              sx={{ fontWeight: "bold" }}
+                            >
+                              {request.requested_group?.group_name ||
+                                request.requested_group_id}
+                            </Typography>
                           </Typography>
-                          <Typography
-                            component="span"
-                            variant="body1"
-                            color="primary"
-                          >
-                            {request.requested_group?.group_name ??
-                              (request.requested_group_id === userGroup.id
-                                ? "của bạn"
-                                : request.requested_group_id)}{" "}
-                          </Typography>
-                          <Typography
-                            component="span"
-                            variant="body1"
-                            color="text.primary"
-                          >
-                            .
-                          </Typography>
-                        </React.Fragment>
-                      }
-                      secondary={
-                        <>
-                          <Typography component="div" variant="body2">
-                            Thành viên nhóm yêu cầu:{" "}
-                            {requestingGroupMembers
-                              .map((member) => member.users.full_name)
-                              .join(", ")}
-                          </Typography>
-                          <Typography component="div" variant="body2">
-                            Thành viên nhóm được yêu cầu:{" "}
-                            {requestedGroupMembers
-                              .map((member) => member.users.full_name)
-                              .join(", ")}
-                          </Typography>
-                          <Typography component="div" variant="body2">
-                            Trạng thái: {request.status}
-                          </Typography>
-                        </>
-                      }
-                    />
+                          <List dense>
+                            {requestedGroupMembers.map((member) => (
+                              <ListItem key={member.student_id} disablePadding>
+                                <ListItemAvatar>
+                                  <Avatar sx={{ bgcolor: "primary.main" }}>
+                                    {member.users.full_name
+                                      .split(" ")
+                                      .map((name) => name[0])
+                                      .join("")}
+                                  </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText
+                                  primary={member.users.full_name}
+                                  secondary={`Mã số: ${
+                                    member.users.student_code ||
+                                    member.users.lecturer_code ||
+                                    "Không có mã"
+                                  }`}
+                                />
+                              </ListItem>
+                            ))}
+                          </List>
+                        </Grid>
+                      </Grid>
+                    </Box>
 
                     {userGroup &&
                       request.requested_group_id === userGroup.id && (
-                        <ListItemSecondaryAction>
+                        <Box
+                          sx={{
+                            width: "100%",
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            mt: 2,
+                          }}
+                        >
                           {request.status === "pending" && (
                             <>
                               <Tooltip title="Chấp nhận">
@@ -694,7 +789,7 @@ function ClassTopics() {
                               </Tooltip>
                             </>
                           )}
-                        </ListItemSecondaryAction>
+                        </Box>
                       )}
                   </ListItem>
                 );
