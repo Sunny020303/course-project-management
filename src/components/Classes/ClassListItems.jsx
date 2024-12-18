@@ -120,7 +120,7 @@ function ClassListItems({
                     key={c.id}
                     disablePadding
                     secondaryAction={
-                      user?.role === "lecturer" && (
+                      (user?.role === "lecturer" || user?.role === "admin") && (
                         <IconButton
                           component={RouterLink}
                           to={`/classes/${c.id}/edit`}

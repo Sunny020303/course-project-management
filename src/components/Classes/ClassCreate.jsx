@@ -20,7 +20,7 @@ function ClassCreate() {
   const { user } = useAuth();
   const navigate = useNavigate();
   //dùng cho quá trình update
-  let id = "";
+  const { id } = useParams();
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
   const [classCode, setClassCode] = useState("");
@@ -55,8 +55,11 @@ function ClassCreate() {
   //xét vai trò admin
   useEffect(() => {
     if (!user) navigate("/login", { replace: true });
-    else
-    if (user.role !== "admin") navigate("/classes", { replace: true });
+    else {
+      if(id==='new'){
+        if (user.role !== "admin") navigate("/classes", { replace: true });
+      } else if(user.role !=="lecturer") navigate("/classes", { replace: true });
+    }
   }, [user, navigate]);
 
   const handleSubmit = () => {

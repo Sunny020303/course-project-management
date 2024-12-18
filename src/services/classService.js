@@ -84,7 +84,7 @@ export const CreateUpdateClass = async (
   year,
 ) => {
   try {
-    if (id === "") {
+    if (id === "new") {
       const { data, error } = await supabase
         .from("classes")
         .insert([{

@@ -35,3 +35,81 @@ export const getStudents = async (studentIds) => {
     return { data: null, error: error.message };
   }
 };
+
+export const getAccountList = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*, departments!department_id(name)");
+    if (error) throw error;
+
+
+    return { data: data, error: null };
+  } catch (error) {
+    console.error("Error getting all account", error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const getAccount = async (id) => {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*, departments!department_id(*)")
+      .eq("id",id)
+    if (error) throw error;
+
+
+    return { data: data, error: null };
+  } catch (error) {
+    console.error("Error getting user account information", error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const getClassUser = async (id) => {
+  try {
+    const { data, error } = await supabase
+      .from("student_class_enrollment")
+      .select("*, classes(*)")
+      .eq("student_id",id)
+    if (error) throw error;
+
+
+    return { data: data, error: null };
+  } catch (error) {
+    console.error("Error getting class for user", error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const updateUser = async (id, email, role, name, idDepartment, idLecturer, idStudent) => {
+  try{
+    const {data,error} = await supabase
+    .from("users")
+        .upsert([{
+          id: id,
+          email: email,
+          role: role,
+          full_name: name,
+          department_id: idDepartment,
+          lecturer_code: idLecturer,
+          student_code: idStudent,
+        }])
+        .select();
+      if (error) {
+        console.log(error);
+        throw error;
+      }
+      if (data) {
+        console.log(data);
+      }
+      return { data: data, error: error};
+  } catch (e) {
+    console.error("Error update info user data: ", e);
+    return {
+      data: null,
+      error: `Không thể update user: ${e.message}`
+    };
+  }
+};

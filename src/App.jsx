@@ -3,7 +3,7 @@ import {
   BrowserRouter as Router,
   Route,
   Routes,
-  Navigate,
+  useNavigate,
 } from "react-router-dom";
 import { ConfigProvider } from "antd";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -24,6 +24,10 @@ const TopicDetails = lazy(() => import("./components/Topics/TopicDetails"));
 const Dashboard = lazy(() => import("./pages/task1/dashboard"));
 const CreateTopic = lazy(() => import("./pages/task1/CreateTopic"));
 const CreateClass = lazy(() => import("./components/Classes/ClassCreate"));
+const Account = lazy(() => import("./components/AccountManagement/Account"));
+const AccountUpdate = lazy(() => import("./components/AccountManagement/AccountUpdate"));
+const AdminAccountManagemant = lazy(() => import("./components/AccountManagement/AdminAccountManagement"));
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,8 +68,9 @@ function App() {
                 minHeight: "100vh",
               }}
             >
-              <Header />
+
               <Router>
+                <Header />
                 <Suspense
                   fallback={
                     <Box
@@ -101,12 +106,17 @@ function App() {
                         path="/topics/details/:id"
                         element={<TopicDetails />}
                       />
-                      <Route path="/createclass" element={<CreateClass/>}/>
+                      <Route path="/createclass/:id" element={<CreateClass />} />
+                      <Route path="/classes/:id/edit" element={<CreateClass />} />
+                      <Route path="/account/:id" element={<Account />} />
+                      <Route path="/accountupdate/:id" element={<AccountUpdate />} />
+                      <Route path="/adminaccountmanagement" element={<AdminAccountManagemant />} />
                     </Routes>
                   </Box>
                 </Suspense>
+                <Footer />
               </Router>
-              <Footer />
+
             </Box>
           </ConfigProvider>
         </QueryClientProvider>

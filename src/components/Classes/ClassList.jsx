@@ -130,7 +130,7 @@ function ClassList() {
           Danh sách lớp học
         </Typography>
         {isAdmin && <Button variant="outlined" onClick={() => {
-          navigate("/createclass")
+          navigate("/createclass/new")
         }}>
           <Add sx={{ marginRight: 1 }} /> Thêm lớp học mới
         </Button>}
