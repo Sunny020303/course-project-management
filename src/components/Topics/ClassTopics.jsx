@@ -598,10 +598,6 @@ function ClassTopics() {
           ) : swapRequests.length > 0 ? (
             <List>
               {swapRequests.map((request) => {
-                const requestingGroupMembers =
-                  request.requesting_group?.student_group_members || [];
-                const requestedGroupMembers =
-                  request.requested_group?.student_group_members || [];
                 return (
                   <ListItem
                     key={request.id}
@@ -677,7 +673,10 @@ function ClassTopics() {
                             </Typography>
                           </Typography>
                           <List dense>
-                            {requestingGroupMembers.map((member) => (
+                            {(
+                              request.requesting_group?.student_group_members ||
+                              []
+                            ).map((member) => (
                               <ListItem key={member.student_id} disablePadding>
                                 <ListItemAvatar>
                                   <Avatar sx={{ bgcolor: "primary.main" }}>
@@ -722,7 +721,10 @@ function ClassTopics() {
                             </Typography>
                           </Typography>
                           <List dense>
-                            {requestedGroupMembers.map((member) => (
+                            {(
+                              request.requested_group?.student_group_members ||
+                              []
+                            ).map((member) => (
                               <ListItem key={member.student_id} disablePadding>
                                 <ListItemAvatar>
                                   <Avatar sx={{ bgcolor: "primary.main" }}>
