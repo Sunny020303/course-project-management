@@ -12,10 +12,7 @@ import {
   Select,
   InputLabel,
   FormControl,
-  Alert,
 } from "@mui/material";
-import Header from "../Layout/Header";
-import Footer from "../Layout/Footer";
 
 function Register() {
   const [email, setEmail] = useState("");
@@ -37,7 +34,7 @@ function Register() {
     if (user) {
       navigate("/classes", { replace: true });
     }
-  }, [user]);
+  }, [navigate, user]);
 
   useEffect(() => {
     const fetchDepartments = async () => {

@@ -31,23 +31,21 @@ import {
   Group as GroupIcon,
   School as SchoolIcon,
   Event as EventIcon,
+  Settings as SettingsIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink } from "react-router-dom";
 import moment from "moment";
 import RegistrationStatus from "./RegistrationStatus";
 import {
-  registerTopic,
   deleteTopic,
   approveTopic,
   rejectTopic,
-  requestTopicSwap,
-  cancelTopicRegistration,
 } from "../../services/topicService";
-import { createGroup } from "../../services/groupService";
 
 const TopicCard = React.memo(function TopicCard({
   topic,
   userGroup,
+  swapRequests,
   showSnackbar,
   fetchTopics,
   fetchUserGroup,
@@ -58,81 +56,12 @@ const TopicCard = React.memo(function TopicCard({
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const [registerLoading, setRegisterLoading] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [approvingTopic, setApprovingTopic] = useState(null);
   const [deletingTopic, setDeletingTopic] = useState(null);
 
   const open = Boolean(anchorEl);
-
-  const handleRegisterTopic = async (topic) => {
-    setRegisterLoading(true);
-
-    try {
-      if (!user) {
-        navigate("/login", { replace: true });
-        return;
-      }
-
-      let groupId = null;
-      if (!userGroup) {
-        const { data: newGroup, error: createGroupError } = await createGroup(
-          classId,
-          [user.id]
-        );
-        if (createGroupError) throw createGroupError;
-        groupId = newGroup.id;
-      } else {
-        groupId = userGroup.id;
-        if (userGroup.members.length > topic.max_members) {
-          showSnackbar(
-            `Nhóm của bạn có ${userGroup.members.length} thành viên, vượt quá số lượng tối đa ${topic.max_members} cho đề tài này.`,
-            "error"
-          );
-          return;
-        }
-      }
-      const { error: registerError } = await registerTopic(topic.id, groupId);
-      if (registerError) throw registerError;
-      await fetchTopics();
-      await fetchUserGroup();
-      showSnackbar("Đăng ký đề tài thành công!", "success");
-    } catch (error) {
-      console.error("Error registering topic:", error);
-      if (error.code === "23505") {
-        showSnackbar("Đề tài này đã có nhóm đăng ký.", "error");
-      } else if (error.code === "23503") {
-        showSnackbar("Lớp học không hợp lệ", "error");
-      } else {
-        showSnackbar(
-          error.message || "Đã có lỗi xảy ra. Vui lòng thử lại.",
-          "error"
-        );
-      }
-    } finally {
-      setRegisterLoading(true);
-    }
-  };
-
-  const handleCancelRegistration = async (topic) => {
-    try {
-      if (!userGroup || !userGroup.topic_id) {
-        showSnackbar("Nhóm của bạn chưa đăng ký đề tài nào.", "error");
-        return;
-      }
-
-      const { error } = await cancelTopicRegistration(userGroup.id);
-      if (error) throw error;
-
-      await fetchTopics();
-      await fetchUserGroup();
-      showSnackbar("Hủy đăng ký đề tài thành công.", "success");
-    } catch (error) {
-      console.error("Error canceling topic registration:", error);
-      showSnackbar("Hủy đăng ký đề tài thất bại.", "error");
-    }
-  };
 
   const handleClick = (event, topic) => {
     setAnchorEl(event.currentTarget);
@@ -200,30 +129,12 @@ const TopicCard = React.memo(function TopicCard({
     }
   };
 
-  const handleRequestSwap = async (topic) => {
-    try {
-      if (!userGroup.topic_id) {
-        showSnackbar("Nhóm của bạn chưa đăng ký đề tài nào.", "error");
-        return;
-      }
-
-      const { error: requestError } = await requestTopicSwap(
-        userGroup,
-        topic.registered_group
-      );
-      if (requestError) throw requestError;
-
-      showSnackbar("Đã gửi yêu cầu trao đổi đề tài.", "success");
-      await fetchSwapRequests();
-    } catch (error) {
-      console.error("Error requesting topic swap:", error);
-      showSnackbar("Lỗi khi gửi yêu cầu trao đổi.", "error");
-    }
-  };
-
   const renderStudentAvatars = useMemo(
-    () => (members, registeredGroup) => {
-      if (!members || members.length === 0) {
+    () => (topic) => {
+      if (
+        !topic.student_group_members ||
+        topic.student_group_members.length === 0
+      ) {
         return (
           <Tooltip title="Chưa có sinh viên đăng ký">
             <PersonIcon />
@@ -234,7 +145,7 @@ const TopicCard = React.memo(function TopicCard({
       const maxAvatars = 3;
       const avatarGroup = (
         <AvatarGroup max={maxAvatars}>
-          {members.map((member) => (
+          {topic.student_group_members.map((member) => (
             <Tooltip key={member.student_id} title={member.users.full_name}>
               <Avatar sx={{ bgcolor: "primary.main" }}>
                 {member.users.full_name
@@ -249,39 +160,41 @@ const TopicCard = React.memo(function TopicCard({
 
       return (
         <Box sx={{ display: "flex", alignItems: "center" }}>
-          {registeredGroup?.group_name ? (
-            <Tooltip title={`Nhóm: ${registeredGroup?.group_name}`}>
+          {topic.registered_group?.group_name ? (
+            <Tooltip title={`Nhóm: ${topic.registered_group?.group_name}`}>
               <Button
                 size="small"
                 color="primary"
-                onClick={() => handleOpenGroupDialog(members)}
+                onClick={() => handleOpenGroupDialog(topic)}
                 startIcon={<VisibilityIcon />}
                 sx={{ marginRight: 1 }}
               >
-                {registeredGroup?.group_name}
+                {topic.registered_group?.group_name}
               </Button>
             </Tooltip>
           ) : (
             <Button
               size="small"
               color="primary"
-              onClick={() => handleOpenGroupDialog(members)}
+              onClick={() => handleOpenGroupDialog(topic)}
               startIcon={<VisibilityIcon />}
               sx={{ marginRight: 1 }}
             >
               Xem nhóm
             </Button>
           )}
-          {members.length <= maxAvatars ? (
+          {topic.student_group_members?.length <= maxAvatars ? (
             avatarGroup
           ) : (
             <Tooltip
-              title={members.map((member) => member.users.full_name).join(", ")}
+              title={topic.student_group_members
+                .map((member) => member.users.full_name)
+                .join(", ")}
             >
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 {avatarGroup}
                 <Typography variant="body2" color="text.secondary" ml={1}>
-                  (+{members.length - maxAvatars})
+                  (+{topic.student_group_members.length - maxAvatars})
                 </Typography>
               </Box>
             </Tooltip>
@@ -400,10 +313,7 @@ const TopicCard = React.memo(function TopicCard({
               <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
                 Nhóm:
               </Typography>
-              {renderStudentAvatars(
-                topic.student_group_members,
-                topic.registered_group
-              )}
+              {renderStudentAvatars(topic)}
             </Stack>
           ) : (
             <Typography variant="body2" color="text.secondary" mt={1}>
@@ -429,16 +339,22 @@ const TopicCard = React.memo(function TopicCard({
                 disabled={approvingTopic || deletingTopic}
               >
                 <EditIcon />
+                <Typography variant="body2" sx={{ ml: 0.5 }}>
+                  Chỉnh sửa
+                </Typography>
               </IconButton>
             </Tooltip>
-            <Tooltip title="Tùy chọn">
+            <Tooltip title="Tuỳ chọn">
               <IconButton
-                color="error"
+                color="secondary"
                 size="small"
                 onClick={(event) => handleClick(event, topic)}
                 disabled={deletingTopic || approvingTopic}
               >
-                <MoreVertIcon />
+                <SettingsIcon />
+                <Typography variant="body2" sx={{ ml: 0.5 }}>
+                  Tuỳ chọn
+                </Typography>
               </IconButton>
             </Tooltip>
 
@@ -484,12 +400,12 @@ const TopicCard = React.memo(function TopicCard({
         <Box>
           <RegistrationStatus
             topic={topic}
-            user={user}
-            handleRegisterTopic={handleRegisterTopic}
-            handleCancelRegistration={handleCancelRegistration}
-            registerLoading={registerLoading}
             userGroup={userGroup}
-            handleRequestSwap={handleRequestSwap}
+            swapRequests={swapRequests}
+            showSnackbar={showSnackbar}
+            fetchTopics={fetchTopics}
+            fetchUserGroup={fetchUserGroup}
+            fetchSwapRequests={fetchSwapRequests}
           />
         </Box>
       </CardActions>

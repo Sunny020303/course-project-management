@@ -15,31 +15,28 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { user, setUserInContext } = useAuth();
+  const { user } = useAuth();
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const navigate = useNavigate();
 
-  const { login } = useAuth();
-  const { logout } = useAuth();
+  const { login, logout } = useAuth();
 
   useEffect(() => {
     if (user) {
       if (showSuccessAlert) {
-        // Đăng xuất sau khi hiển thị thông báo đăng ký thành công
         logout();
         setShowSuccessAlert(false);
-        alert("Đăng ký thành công! Vui lòng đăng nhập."); // có thể thay bằng snackbar
+        alert("Đăng ký thành công! Vui lòng đăng nhập.");
       }
       navigate("/classes", { replace: true });
     }
 
-    // Lắng nghe query parameter "registered" từ trang đăng ký
     const searchParams = new URLSearchParams(window.location.search);
     const registered = searchParams.get("registered");
     if (registered) {
       setShowSuccessAlert(true);
     }
-  }, [user, navigate]);
+  }, [user, navigate, showSuccessAlert, logout]);
 
   async function handleSubmit(e) {
     e.preventDefault();

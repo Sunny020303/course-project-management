@@ -23,18 +23,16 @@ export const AuthProvider = ({ children }) => {
       } = await supabase.auth.getUser();
       if (error) {
         console.error("Error fetching user data:", error);
-      } else {
-        if (authUser) {
-          const { data: user, error: userError } = await supabase
-            .from("users")
-            .select("*")
-            .eq("id", authUser.id)
-            .single();
-          if (userError) {
-            console.error("Error getting user:", userError);
-          } else {
-            setUser(user);
-          }
+      } else if (authUser) {
+        const { data: user, error: userError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("id", authUser.id)
+          .single();
+        if (userError) {
+          console.error("Error getting user:", userError);
+        } else {
+          setUser(user);
         }
       }
       setLoading(false);

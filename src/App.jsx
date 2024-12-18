@@ -20,6 +20,9 @@ const Login = lazy(() => import("./components/Authentication/Login"));
 const Register = lazy(() => import("./components/Authentication/Register"));
 const ClassList = lazy(() => import("./components/Classes/ClassList"));
 const ClassTopics = lazy(() => import("./components/Topics/ClassTopics"));
+const GroupManagement = lazy(() =>
+  import("./components/Groups/GroupManagement")
+);
 const TopicDetails = lazy(() => import("./components/Topics/TopicDetails"));
 const Dashboard = lazy(() => import("./pages/task1/dashboard"));
 const CreateTopic = lazy(() => import("./pages/task1/CreateTopic"));
@@ -101,6 +104,10 @@ function App() {
                       <Route
                         path="/classes/:classId"
                         element={<ClassTopics />}
+                      />
+                      <Route
+                        path="/classes/:classId/groups"
+                        element={<GroupManagement />}
                       />
                       <Route
                         path="/topics/details/:id"

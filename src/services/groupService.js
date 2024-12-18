@@ -1,10 +1,14 @@
 import supabase from "./supabaseClient";
 
-export const createGroup = async (classId, studentIds) => {
+export const createGroup = async (classId, studentIds, groupName) => {
   try {
     const { data: group, error } = await supabase
       .from("student_groups")
-      .insert({ class_id: classId })
+      .insert(
+        groupName
+          ? { class_id: classId, group_name: groupName }
+          : { class_id: classId }
+      )
       .single();
     if (error) throw error;
 
@@ -60,5 +64,56 @@ export const getGroup = async (studentId, classId) => {
   } catch (error) {
     console.error("Error fetching group:", error);
     return { data: null, error: error.message };
+  }
+};
+
+export const getGroups = async (classId) => {
+  try {
+    const { data, error } = await supabase
+      .from("student_groups")
+      .select(
+        "*, student_group_members(student_id, users: student_id(full_name))"
+      )
+      .eq("class_id", classId);
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error fetching groups:", error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const joinGroup = async (groupId, userId) => {
+  try {
+    const { error } = await supabase.from("student_group_members").insert([
+      {
+        student_group_id: groupId,
+        student_id: userId,
+      },
+    ]);
+    if (error) throw error;
+
+    return { error: null };
+  } catch (error) {
+    console.error("Error joining group:", error);
+    return { error: error.message };
+  }
+};
+
+export const leaveGroup = async (groupId, userId) => {
+  try {
+    const { error } = await supabase
+      .from("student_group_members")
+      .delete()
+      .eq("student_group_id", groupId)
+      .eq("student_id", userId);
+
+    if (error) throw error;
+
+    return { error: null };
+  } catch (error) {
+    console.error("Error leaving group:", error);
+    return { error: error.message };
   }
 };

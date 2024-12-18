@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getClassesByUser } from "../../services/classService";
 import { useAuth } from "../../context/AuthContext";
@@ -6,18 +6,12 @@ import {
   Typography,
   Box,
   Container,
-  CircularProgress,
-  Alert,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   TextField,
   InputAdornment,
   IconButton,
   Skeleton,
   Button,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import SearchIcon from "@mui/icons-material/Search";
 import { Add } from "@mui/icons-material";
 import ClassListItems from "./ClassListItems";
@@ -30,12 +24,7 @@ function ClassList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [expanded, setExpanded] = useState(false);
-  const [isAdmin,setIsAdmin]=useState(false);
-
-  const handleChange = (panel) => (event, isExpanded) => {
-    setExpanded(isExpanded ? panel : false);
-  };
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
@@ -47,8 +36,7 @@ function ClassList() {
 
   useEffect(() => {
     if (!user) navigate("/login", { replace: true });
-    else
-    if (user.role === "admin") {
+    else if (user.role === "admin") {
       setIsAdmin(true);
     }
   }, [user, navigate]);
@@ -57,32 +45,27 @@ function ClassList() {
     if (user) return await getClassesByUser(user);
   }, [user]);
 
-  const fetchClasses = async () => {
+  const fetchClasses = useCallback(async () => {
     setLoading(true);
     try {
-      const cachedClasses = sessionStorage.getItem(`classes-${user?.id}`);
-      if (cachedClasses) {
-        setClassesBySemester(JSON.parse(cachedClasses));
-      } else {
-        const { data, error } = await classesData;
+      const { data, error } = await classesData;
 
-        if (error) {
-          throw error;
-        }
-
-        // Group lớp học theo học kỳ
-        const groupedClasses = data.reduce((acc, c) => {
-          acc[c.semester] = acc[c.semester] || [];
-          acc[c.semester].push(c);
-          return acc;
-        }, {});
-
-        setClassesBySemester(groupedClasses);
-        sessionStorage.setItem(
-          `classes-${user?.id}`,
-          JSON.stringify(groupedClasses)
-        );
+      if (error) {
+        throw error;
       }
+
+      // Group lớp học theo học kỳ
+      const groupedClasses = data.reduce((acc, c) => {
+        acc[c.semester] = acc[c.semester] || [];
+        acc[c.semester].push(c);
+        return acc;
+      }, {});
+
+      setClassesBySemester(groupedClasses);
+      sessionStorage.setItem(
+        `classes-${user?.id}`,
+        JSON.stringify(groupedClasses)
+      );
     } catch (error) {
       if (error.message === "PGRST116") {
         // No data found
@@ -95,11 +78,11 @@ function ClassList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [classesData, user]);
 
   useEffect(() => {
     fetchClasses();
-  }, [classesData]);
+  }, [classesData, fetchClasses]);
 
   // Hàm lọc danh sách lớp học
   const filteredClassesBySemester = useMemo(() => {

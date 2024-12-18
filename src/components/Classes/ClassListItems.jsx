@@ -1,23 +1,17 @@
 import React, { useState, useEffect } from "react";
-import PropTypes from "prop-types"; // Import PropTypes
 import {
   Typography,
   List,
   ListItem,
   ListItemButton,
   ListItemText,
-  Box,
-  CircularProgress,
   Alert,
   Accordion,
   AccordionSummary,
   AccordionDetails,
   Button,
-  TextField,
-  InputAdornment,
   IconButton,
   ListItemIcon,
-  Skeleton,
 } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -25,7 +19,6 @@ import {
   ExpandMore as ExpandMoreIcon,
   Visibility as VisibilityIcon,
   Edit as EditIcon,
-  Search as SearchIcon,
   School as SchoolIcon,
 } from "@mui/icons-material";
 
@@ -64,7 +57,7 @@ function ClassListItems({
     ) {
       setExpanded(expanded);
     }
-  }, [searchTerm, classesBySemester]);
+  }, [searchTerm, classesBySemester, expanded]);
 
   const formattedSemester = (semesterInt) => {
     const year = String(semesterInt).slice(0, 4);
