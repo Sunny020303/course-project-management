@@ -9,6 +9,7 @@ export const createGroup = async (classId, studentIds, groupName) => {
           ? { class_id: classId, group_name: groupName }
           : { class_id: classId }
       )
+      .select("id")
       .single();
     if (error) throw error;
 
@@ -72,7 +73,7 @@ export const getGroups = async (classId) => {
     const { data, error } = await supabase
       .from("student_groups")
       .select(
-        "*, student_group_members(student_id, users: student_id(full_name))"
+        "*, student_group_members(student_id, users: student_id(full_name, student_code, lecturer_code))"
       )
       .eq("class_id", classId);
     if (error) throw error;
@@ -86,6 +87,33 @@ export const getGroups = async (classId) => {
 
 export const joinGroup = async (groupId, userId) => {
   try {
+    const { data: groupData, error: groupDataError } = await supabase
+      .from("student_groups")
+      .select("topic_id")
+      .eq("id", groupId)
+      .single();
+    if (groupDataError) throw groupDataError;
+
+    let maxMembers = null;
+    if (groupData.topic_id) {
+      const { data: topicData, error: topicError } = await supabase
+        .from("topics")
+        .select("max_members")
+        .eq("id", groupData.topic_id)
+        .single();
+      if (topicError) throw topicError;
+      maxMembers = topicData.max_members;
+    }
+
+    const { data: members, error: membersError } = await supabase
+      .from("student_group_members")
+      .select("student_id")
+      .eq("student_group_id", groupId);
+    if (membersError) throw membersError;
+
+    if (maxMembers !== null && members.length >= maxMembers)
+      throw new Error("maxed");
+
     const { error } = await supabase.from("student_group_members").insert([
       {
         student_group_id: groupId,
@@ -103,12 +131,10 @@ export const joinGroup = async (groupId, userId) => {
 
 export const leaveGroup = async (groupId, userId) => {
   try {
-    const { error } = await supabase
-      .from("student_group_members")
-      .delete()
-      .eq("student_group_id", groupId)
-      .eq("student_id", userId);
-
+    const { error } = await supabase.rpc(
+      "delete_student_group_member_and_group",
+      { groupid: groupId, studentid: userId }
+    );
     if (error) throw error;
 
     return { error: null };

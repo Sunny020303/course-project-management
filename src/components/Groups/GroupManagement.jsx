@@ -37,6 +37,9 @@ import {
   Info as InfoIcon,
   Visibility as VisibilityIcon,
   Edit as EditIcon,
+  Delete as DeleteIcon,
+  Add as AddIcon,
+  Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import supabase from "../../services/supabaseClient";
 
@@ -57,6 +60,9 @@ function GroupManagement() {
   const [selectedGroupInfo, setSelectedGroupInfo] = useState(null);
   const [isEditingGroupName, setIsEditingGroupName] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+
+  const [addMemberEmail, setAddMemberEmail] = useState("");
+  const [isAddingMember, setIsAddingMember] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
@@ -78,7 +84,7 @@ function GroupManagement() {
       if (createError) throw createError;
 
       setGroupName("");
-      await fetchUserGroup();
+      await fetchAvailableGroups();
       showSnackbar("Tạo nhóm thành công", "success");
     } catch (error) {
       showSnackbar("Lỗi khi tạo nhóm", "error");
@@ -135,7 +141,12 @@ function GroupManagement() {
       await fetchAvailableGroups();
       showSnackbar("Tham gia nhóm thành công", "success");
     } catch (error) {
-      showSnackbar("Lỗi khi tham gia nhóm", "error");
+      if (error === "maxed")
+        showSnackbar(
+          "Nhóm đã đạt số lượng thành viên tối đa cho phép.",
+          "error"
+        );
+      else showSnackbar("Lỗi khi tham gia nhóm", "error");
     } finally {
       setLoading(false);
     }
@@ -227,6 +238,80 @@ function GroupManagement() {
     setSnackbarOpen(false);
   };
 
+  const handleAddMember = async () => {
+    setIsAddingMember(true);
+    try {
+      const { data: members, error: membersError } = await supabase
+        .from("student_group_members")
+        .select("student_id")
+        .eq("student_group_id", currentGroup.id);
+      if (membersError) throw membersError;
+
+      let maxMembers = null;
+      if (currentGroup.topic_id) {
+        const { data: topicData, error: topicError } = await supabase
+          .from("topics")
+          .select("max_members")
+          .eq("id", currentGroup.topic_id)
+          .single();
+        if (topicError) throw topicError;
+        maxMembers = topicData.max_members;
+      }
+
+      if (maxMembers !== null && members.length >= maxMembers) {
+        showSnackbar("Nhóm đã đạt số lượng thành viên tối đa.", "error");
+        return;
+      }
+
+      const { data: users, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", addMemberEmail);
+      if (userError) throw userError;
+
+      if (users.length === 0) {
+        showSnackbar("Không tìm thấy người dùng với email này.", "error");
+        return;
+      }
+
+      const newMemberId = users[0].id;
+
+      const { error: addMemberError } = await supabase
+        .from("student_group_members")
+        .insert([
+          {
+            student_group_id: currentGroup.id,
+            student_id: newMemberId,
+            created_by: user.id,
+            updated_by: user.id,
+          },
+        ]);
+      if (addMemberError) throw addMemberError;
+
+      await fetchUserGroup();
+      showSnackbar("Thêm thành viên thành công.", "success");
+      setAddMemberEmail("");
+    } catch (error) {
+      console.error("Error adding member:", error);
+      showSnackbar("Lỗi khi thêm thành viên.", "error");
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId) => {
+    try {
+      const { error } = await leaveGroup(currentGroup.id, memberId);
+      if (error) throw error;
+
+      await fetchAvailableGroups();
+      showSnackbar("Thành viên đã được xóa khỏi nhóm.", "success");
+    } catch (error) {
+      console.error("Error removing member:", error);
+      showSnackbar("Lỗi khi xóa thành viên khỏi nhóm.", "error");
+    }
+  };
+
   return (
     <Container maxWidth="md" sx={{ mt: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
@@ -235,7 +320,57 @@ function GroupManagement() {
 
       {currentGroup ? (
         <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
-          <Typography variant="h5" gutterBottom>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            {isEditingGroupName ? (
+              <>
+                <Tooltip title="Lưu">
+                  <IconButton
+                    color="primary"
+                    onClick={handleSaveGroupName}
+                    disabled={loading || !newGroupName}
+                  >
+                    {loading ? (
+                      <CircularProgress size={24} color="inherit" />
+                    ) : (
+                      <CheckIcon />
+                    )}
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Hủy">
+                  <IconButton onClick={handleCancelEdit}>
+                    <CancelIcon />
+                  </IconButton>
+                </Tooltip>
+              </>
+            ) : (
+              <Tooltip title="Đổi tên nhóm">
+                <Button
+                  variant="outlined"
+                  onClick={handleEditGroupName}
+                  startIcon={<EditIcon />}
+                >
+                  Đổi tên nhóm
+                </Button>
+              </Tooltip>
+            )}
+
+            <Tooltip title="Rời nhóm">
+              <Button
+                variant="contained"
+                color="error"
+                onClick={handleLeaveGroup}
+                disabled={isLeavingGroup}
+              >
+                {isLeavingGroup ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  "Rời nhóm"
+                )}
+              </Button>
+            </Tooltip>
+          </Box>
+
+          <Typography variant="h5" gutterBottom sx={{ mt: 2 }}>
             Nhóm hiện tại
           </Typography>
           {isEditingGroupName ? (
@@ -243,6 +378,7 @@ function GroupManagement() {
               label="Tên nhóm"
               variant="outlined"
               fullWidth
+              required
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
               sx={{ mb: 2 }}
@@ -266,7 +402,19 @@ function GroupManagement() {
           )}
           <List>
             {currentGroup.members.map((member) => (
-              <ListItem key={member.student_id}>
+              <ListItem
+                key={member.student_id}
+                secondaryAction={
+                  <IconButton
+                    edge="end"
+                    aria-label="delete"
+                    onClick={() => handleRemoveMember(member.student_id)}
+                    disabled={isLeavingGroup}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                }
+              >
                 <ListItemText
                   primary={member.users.full_name}
                   secondary={`Mã số: ${
@@ -278,49 +426,34 @@ function GroupManagement() {
               </ListItem>
             ))}
           </List>
-
-          {isEditingGroupName ? (
-            <>
-              <Button
-                variant="contained"
-                onClick={handleSaveGroupName}
-                sx={{ mr: 1 }}
-                startIcon={<CheckIcon />}
-              >
-                Lưu
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={handleCancelEdit}
-                sx={{ mr: 1 }}
-                startIcon={<CancelIcon />}
-              >
-                Hủy
-              </Button>
-            </>
-          ) : (
-            <Button
+          <Box sx={{ my: 2 }}>
+            <TextField
+              label="Email thành viên"
               variant="outlined"
-              onClick={handleEditGroupName}
+              fullWidth
+              value={addMemberEmail}
+              onChange={(e) => setAddMemberEmail(e.target.value)}
+              sx={{ mb: 2 }}
+              placeholder="Nhập email thành viên"
+              helperText="Vui lòng nhập chính xác email của thành viên cần thêm."
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAddMember}
+              disabled={isAddingMember}
+              startIcon={
+                isAddingMember ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  <AddIcon />
+                )
+              }
               sx={{ mr: 1 }}
-              startIcon={<EditIcon />}
             >
-              Đổi tên nhóm
+              Thêm thành viên
             </Button>
-          )}
-
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleLeaveGroup}
-            disabled={isLeavingGroup}
-          >
-            {isLeavingGroup ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              "Rời nhóm"
-            )}
-          </Button>
+          </Box>
         </Paper>
       ) : (
         <>
@@ -345,7 +478,7 @@ function GroupManagement() {
                     variant="contained"
                     color="primary"
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !groupName}
                     startIcon={loading ? <CircularProgress size={24} /> : null}
                   >
                     Tạo nhóm
@@ -356,9 +489,23 @@ function GroupManagement() {
           </Paper>
 
           <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
-            <Typography variant="h5" gutterBottom>
-              Tham gia nhóm
-            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Typography variant="h6" gutterBottom>
+                Tham gia nhóm
+              </Typography>
+              <Tooltip title="Làm mới">
+                <IconButton onClick={fetchAvailableGroups}>
+                  <RefreshIcon />
+                </IconButton>
+              </Tooltip>
+            </Box>
             <TextField
               label="Tìm kiếm nhóm"
               variant="outlined"
@@ -423,7 +570,12 @@ function GroupManagement() {
           </Paper>
         </>
       )}
-      <Dialog open={openGroupInfoDialog} onClose={handleCloseGroupInfo}>
+      <Dialog
+        open={openGroupInfoDialog}
+        onClose={handleCloseGroupInfo}
+        fullWidth
+        maxWidth="sm"
+      >
         <DialogTitle>
           <Typography variant="h6">Thông tin nhóm</Typography>
         </DialogTitle>
@@ -433,6 +585,17 @@ function GroupManagement() {
               <Typography variant="body1">
                 Tên nhóm: {selectedGroupInfo.group_name || "Nhóm chưa đặt tên"}
               </Typography>
+              {selectedGroupInfo.topic_id && (
+                <Typography variant="body2">
+                  Đề tài đã đăng ký:{" "}
+                  <Link
+                    component={RouterLink}
+                    to={`/topics/details/${selectedGroupInfo.topic_id}`}
+                  >
+                    Xem chi tiết đề tài
+                  </Link>
+                </Typography>
+              )}
               <Typography variant="body2">
                 Thành viên:{" "}
                 {selectedGroupInfo.student_group_members
