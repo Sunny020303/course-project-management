@@ -9,7 +9,7 @@ export const createGroup = async (classId, studentIds, groupName) => {
           ? { class_id: classId, group_name: groupName }
           : { class_id: classId }
       )
-      .select("id")
+      .select()
       .single();
     if (error) throw error;
 

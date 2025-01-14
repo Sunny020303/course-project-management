@@ -365,3 +365,52 @@ export const subscribeToTopicSwapRequests = (
     supabase.removeChannel(channel);
   };
 };
+
+export const createTopic = async (topicData) => {
+  try {
+    const { data, error } = await supabase
+      .from("topics")
+      .insert({ ...topicData })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error creating topic:", error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const updateTopic = async (topicData) => {
+  try {
+    const { data, error } = await supabase
+      .from("topics")
+      .update(topicData)
+      .eq("id", topicData.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error updating topic:", error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const getTopic = async (topicId) => {
+  try {
+    const { data, error } = await supabase
+      .from("topics")
+      .select("*")
+      .eq("id", topicId)
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error fetching topic:", error);
+    return { data: null, error: error.message };
+  }
+};

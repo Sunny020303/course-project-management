@@ -2,6 +2,11 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate, Link as RouterLink } from "react-router-dom";
 import {
   getTopics,
+  registerTopic,
+  deleteTopic,
+  approveTopic,
+  rejectTopic,
+  requestTopicSwap,
   getTopicSwapRequests,
   approveTopicSwap,
   rejectTopicSwap,
@@ -24,12 +29,20 @@ import {
   IconButton,
   CircularProgress,
   Alert,
+  Chip,
   Skeleton,
   Tooltip,
+  Menu,
   MenuItem,
+  Avatar,
+  AvatarGroup,
+  Link,
+  Stack,
+  Snackbar,
   Select,
   InputLabel,
   FormControl,
+  Divider,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -39,17 +52,15 @@ import {
   ListItemText,
   ListItemAvatar,
   ListItemSecondaryAction,
-  Divider,
-  Snackbar,
   Badge,
-  Chip,
-  Link,
-  Avatar,
 } from "@mui/material";
 import { Container } from "@mui/system";
 import {
   Search as SearchIcon,
   Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  MoreVert as MoreVertIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   SwapCalls as SwapCallsIcon,
@@ -57,9 +68,12 @@ import {
   Group as GroupIcon,
   Topic as TopicIcon,
 } from "@mui/icons-material";
-import { getGroup } from "../../services/groupService";
+import moment from "moment";
+import { getGroup, createGroup } from "../../services/groupService";
 import TopicCard from "./TopicCard";
 import GroupDialog from "./GroupDialog";
+
+const TOPICS_PER_PAGE = 10;
 
 function ClassTopics() {
   const { classId } = useParams();
@@ -70,19 +84,31 @@ function ClassTopics() {
   const [currentClass, setCurrentClass] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [registerLoading, setRegisterLoading] = useState(false);
+  const [registerError, setRegisterError] = useState(null);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [approvingTopic, setApprovingTopic] = useState(null);
+  const [deletingTopic, setDeletingTopic] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
   const [userGroup, setUserGroup] = useState(null);
   const [openGroupDialog, setOpenGroupDialog] = useState(false);
-  const [selectedTopic, setSelectedTopic] = useState(null);
   const [swapRequests, setSwapRequests] = useState([]);
   const [openSwapRequestsDialog, setOpenSwapRequestsDialog] = useState(false);
   const [loadingSwapRequests, setLoadingSwapRequests] = useState(false);
   const [processingSwap, setProcessingSwap] = useState(false);
   const [unreadSwapRequestsCount, setUnreadSwapRequestsCount] = useState(0);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [fetchTopicsError, setFetchTopicsError] = useState(null);
+  const [topicsLoading, setTopicsLoading] = useState(false);
+
+  const open = Boolean(anchorEl);
 
   const formattedSemester = useMemo(() => {
     return (semesterInt) => {
@@ -93,67 +119,6 @@ function ClassTopics() {
       return `${year} - ${semesterName}`;
     };
   }, []);
-
-  const fetchUserGroup = useCallback(async () => {
-    if (user) {
-      try {
-        const { data, error } = await getGroup(user.id, classId);
-        if (error) throw error;
-        setUserGroup(data);
-      } catch (error) {
-        console.error("Error getting user group", error);
-      }
-    }
-  }, [classId, user]);
-
-  const fetchTopics = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { data, error } = await getTopics(classId, user);
-      if (error) throw error;
-      setTopics(data);
-    } catch (error) {
-      setError(error.message);
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [classId, user]);
-
-  const fetchSwapRequests = useCallback(async () => {
-    setLoadingSwapRequests(true);
-    try {
-      if (!userGroup) return;
-      const { data, error } = await getTopicSwapRequests(userGroup.id);
-      if (error) throw error;
-
-      setSwapRequests(data);
-    } catch (error) {
-      console.error("Error fetching swap requests:", error);
-      showSnackbar("Failed to fetch swap requests.", "error");
-    } finally {
-      setLoadingSwapRequests(false);
-    }
-  }, [userGroup]);
-
-  const fetchUnreadSwapRequestsCount = useCallback(async () => {
-    if (userGroup) {
-      try {
-        const { data, error } = await getUnreadSwapRequests(userGroup.id);
-        if (error) throw error;
-        setUnreadSwapRequestsCount(data.length);
-      } catch (error) {
-        console.error("Error fetching unread swap requests count:", error);
-      }
-    }
-  }, [userGroup]);
-
-  const handleRetryFetchTopics = () => {
-    setError(null);
-    fetchTopics();
-  };
 
   const handleSnackbarClose = (event, reason) => {
     if (reason === "clickaway") {
@@ -179,12 +144,104 @@ function ClassTopics() {
     setSelectedTopic(null);
   };
 
+  const handleRegisterTopic = async (topic) => {
+    setRegisterError(null);
+    setRegisterLoading(true);
+
+    try {
+      // ... other code
+
+      // Cập nhật danh sách topics sau khi đăng ký thành công
+      await fetchTopics();
+
+      // ... other code
+    } catch (error) {
+      // ... other code
+    } finally {
+      setRegisterLoading(false);
+      setRegistrationSuccess(false);
+    }
+  };
+
   const handleSearchChange = (event) => {
     setSearchQuery(event.target.value);
+    setCurrentPage(1);
   };
 
   const handleStatusChange = (event) => {
     setSelectedStatus(event.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleClick = (event, topic) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedTopic(topic);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+    setSelectedTopic(null);
+  };
+
+  const handleEditTopic = (topicId) => {
+    navigate(`/classes/${classId}/topics/${topicId}/edit`);
+  };
+
+  const handleApproveTopic = async (topicId) => {
+    setApprovingTopic(topicId);
+    try {
+      const { error } = await approveTopic(topicId);
+      if (error) throw error;
+
+      // Cập nhật danh sách topics sau khi phê duyệt thành công
+      await fetchTopics();
+      showSnackbar("Phê duyệt đề tài thành công");
+    } catch (error) {
+      console.error("Error approving topic:", error);
+      showSnackbar("Phê duyệt đề tài thất bại.", "error");
+    } finally {
+      setApprovingTopic(null);
+      handleClose();
+    }
+  };
+
+  const handleRejectTopic = async (topicId) => {
+    setApprovingTopic(topicId);
+
+    try {
+      const { error } = await rejectTopic(topicId);
+      if (error) throw error;
+
+      // Cập nhật danh sách topics sau khi từ chối thành công
+      await fetchTopics();
+
+      showSnackbar("Từ chối đề tài thành công");
+    } catch (error) {
+      console.error("Error rejecting topic:", error);
+      showSnackbar("Từ chối đề tài thất bại.", "error");
+    } finally {
+      setApprovingTopic(null);
+      handleClose();
+    }
+  };
+
+  const handleDeleteTopic = async (topicId) => {
+    setDeletingTopic(topicId);
+    try {
+      const { error } = await deleteTopic(topicId);
+      if (error) throw error;
+
+      // Cập nhật danh sách topics sau khi xóa thành công
+      await fetchTopics();
+
+      showSnackbar("Xóa đề tài thành công");
+    } catch (error) {
+      console.error("Error deleting topic:", error);
+      showSnackbar("Xóa đề tài thất bại.", "error");
+    } finally {
+      setDeletingTopic(null);
+      handleClose();
+    }
   };
 
   const handleJoinGroup = () => {
@@ -240,37 +297,6 @@ function ClassTopics() {
     }
   };
 
-  const filteredTopics = useMemo(() => {
-    if (!topics) {
-      return [];
-    }
-    return topics.filter((topic) => {
-      const searchMatch = topic.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-      const statusMatch = selectedStatus
-        ? topic.approval_status === selectedStatus
-        : true;
-      return searchMatch && statusMatch;
-    });
-  }, [topics, searchQuery, selectedStatus]);
-
-  const registeredTopics = useMemo(() => {
-    return filteredTopics.filter((topic) => topic.registeredByUser);
-  }, [filteredTopics]);
-
-  const unregisteredTopics = useMemo(() => {
-    return filteredTopics.filter((topic) => !topic.registeredByUser);
-  }, [filteredTopics]);
-
-  useEffect(() => {
-    if (!user) navigate("/login", { replace: true });
-  }, [user, navigate]);
-
-  useEffect(() => {
-    fetchUserGroup();
-  }, [classId, user, fetchUserGroup]);
-
   useEffect(() => {
     const fetchClassDetails = async () => {
       if (classId) {
@@ -294,9 +320,97 @@ function ClassTopics() {
     fetchClassDetails();
   }, [classId]);
 
+  const fetchTopics = useCallback(async () => {
+    setTopicsLoading(true);
+    setFetchTopicsError(null);
+    try {
+      const { data, error } = await getTopics(classId, user);
+      if (error) throw error;
+      setTopics(data);
+    } catch (error) {
+      setFetchTopicsError(error.message);
+      console.error("Error fetching topics:", error);
+    } finally {
+      setTopicsLoading(false);
+    }
+  }, [classId, user]);
+
   useEffect(() => {
     fetchTopics();
   }, [currentClass, fetchTopics]);
+
+  const fetchSwapRequests = useCallback(async () => {
+    setLoadingSwapRequests(true);
+    try {
+      if (!userGroup) return;
+      const { data, error } = await getTopicSwapRequests(userGroup.id);
+      if (error) throw error;
+
+      setSwapRequests(data);
+    } catch (error) {
+      console.error("Error fetching swap requests:", error);
+      showSnackbar("Failed to fetch swap requests.", "error");
+    } finally {
+      setLoadingSwapRequests(false);
+    }
+  }, [userGroup]);
+
+  const fetchUnreadSwapRequestsCount = useCallback(async () => {
+    if (userGroup) {
+      try {
+        const { data, error } = await getUnreadSwapRequests(userGroup.id);
+        if (error) throw error;
+        setUnreadSwapRequestsCount(data.length);
+      } catch (error) {
+        console.error("Error fetching unread swap requests count:", error);
+      }
+    }
+  }, [userGroup]);
+
+  const fetchUserGroup = useCallback(async () => {
+    if (user) {
+      try {
+        const { data, error } = await getGroup(user.id, classId);
+        if (error) throw error;
+        setUserGroup(data);
+      } catch (error) {
+        console.error("Error getting user group", error);
+      }
+    }
+  }, [user, classId]);
+
+  useEffect(() => {
+    fetchUserGroup();
+  }, [fetchUserGroup]);
+
+  useEffect(() => {
+    if (!user) {
+      navigate("/login", { replace: true });
+    }
+  }, [navigate, user]);
+
+  const filteredTopics = useMemo(() => {
+    if (!topics) {
+      return [];
+    }
+    return topics.filter((topic) => {
+      const searchMatch = topic.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const statusMatch = selectedStatus
+        ? topic.approval_status === selectedStatus
+        : true;
+      return searchMatch && statusMatch;
+    });
+  }, [topics, searchQuery, selectedStatus]);
+
+  const registeredTopics = useMemo(() => {
+    return filteredTopics.filter((topic) => topic.registeredByUser);
+  }, [filteredTopics]);
+
+  const unregisteredTopics = useMemo(() => {
+    return filteredTopics.filter((topic) => !topic.registeredByUser);
+  }, [filteredTopics]);
 
   useEffect(() => {
     let unsubscribe;
@@ -347,13 +461,77 @@ function ClassTopics() {
     userGroup,
   ]);
 
-  if (!currentClass && !loading)
-    return <Typography variant="body1">Không tìm thấy lớp học.</Typography>;
+  const handleRetryFetchTopics = () => {
+    setFetchTopicsError(null);
+    fetchTopics();
+  };
+
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <Container maxWidth="md" sx={{ flexGrow: 1, mt: 2 }}>
+          <Typography variant="h5" gutterBottom sx={{ color: "primary.main" }}>
+            {currentClass?.name || <Skeleton />} -{" "}
+            {currentClass ? (
+              formattedSemester(currentClass.semester)
+            ) : (
+              <Skeleton />
+            )}
+          </Typography>
+          <Grid container spacing={2}>
+            {[...Array(3)].map((_, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <Card sx={{ boxShadow: 2 }}>
+                  <CardContent>
+                    <Skeleton variant="text" sx={{ fontSize: "1.5rem" }} />
+                    <Skeleton
+                      variant="rectangular"
+                      height={100}
+                      sx={{ mt: 1 }}
+                    />
+                  </CardContent>
+                  <CardActions>
+                    <Skeleton variant="circular" width={40} height={40} />
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        severity="error"
+        action={
+          <Button color="inherit" size="small" onClick={handleRetryFetchTopics}>
+            Thử lại
+          </Button>
+        }
+      >
+        {error}
+      </Alert>
+    );
+  }
+
+  if (!currentClass) {
+    return <Typography>Không tìm thấy lớp học</Typography>;
+  }
 
   if (
-    !loading &&
-    user?.role === "lecturer" &&
-    currentClass.lecturer_id !== user?.id
+    user &&
+    user.role === "lecturer" &&
+    currentClass.lecturer_id !== user.id
   ) {
     return (
       <Alert severity="error">
@@ -424,7 +602,25 @@ function ClassTopics() {
           đăng ký đề tài.
         </Alert>
       )}
-      <Grid container spacing={2} mt={2}>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+      >
+        {snackbarSeverity ? (
+          <Alert
+            onClose={handleSnackbarClose}
+            severity={snackbarSeverity}
+            sx={{ width: "100%" }}
+          >
+            {snackbarMessage}
+          </Alert>
+        ) : (
+          snackbarMessage
+        )}
+      </Snackbar>
+      <Grid container spacing={2}>
         <Grid item xs={12} md={6}>
           <TextField
             label="Tìm kiếm đề tài"
@@ -432,6 +628,7 @@ function ClassTopics() {
             fullWidth
             value={searchQuery}
             onChange={handleSearchChange}
+            placeholder="Tìm kiếm theo tên đề tài"
             InputProps={{
               endAdornment: (
                 <InputAdornment position="end">
@@ -441,7 +638,6 @@ function ClassTopics() {
                 </InputAdornment>
               ),
             }}
-            placeholder="Tìm kiếm theo tên đề tài"
           />
         </Grid>
         <Grid item xs={12} md={6}>
@@ -465,7 +661,7 @@ function ClassTopics() {
           </FormControl>
         </Grid>
       </Grid>
-      {error ? (
+      {fetchTopicsError ? (
         <Alert
           severity="error"
           action={
@@ -478,9 +674,9 @@ function ClassTopics() {
             </Button>
           }
         >
-          {error}
+          {fetchTopicsError}
         </Alert>
-      ) : loading ? (
+      ) : topicsLoading ? (
         <Grid container spacing={2} mt={2}>
           {[...Array(3)].map((_, index) => (
             <Grid item xs={12} sm={6} md={4} key={index}>
@@ -556,24 +752,6 @@ function ClassTopics() {
           </Grid>
         </>
       )}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-      >
-        {snackbarSeverity ? (
-          <Alert
-            onClose={handleSnackbarClose}
-            severity={snackbarSeverity}
-            sx={{ width: "100%" }}
-          >
-            {snackbarMessage}
-          </Alert>
-        ) : (
-          snackbarMessage
-        )}
-      </Snackbar>
       <GroupDialog
         open={openGroupDialog}
         onClose={handleCloseGroupDialog}

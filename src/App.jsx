@@ -24,13 +24,18 @@ const GroupManagement = lazy(() =>
   import("./components/Groups/GroupManagement")
 );
 const TopicDetails = lazy(() => import("./components/Topics/TopicDetails"));
+const AddTopic = lazy(() => import("./components/Topics/AddTopic"));
+const EditTopic = lazy(() => import("./components/Topics/EditTopic"));
 const Dashboard = lazy(() => import("./pages/task1/dashboard"));
 const CreateTopic = lazy(() => import("./pages/task1/CreateTopic"));
 const CreateClass = lazy(() => import("./components/Classes/ClassCreate"));
 const Account = lazy(() => import("./components/AccountManagement/Account"));
-const AccountUpdate = lazy(() => import("./components/AccountManagement/AccountUpdate"));
-const AdminAccountManagemant = lazy(() => import("./components/AccountManagement/AdminAccountManagement"));
-
+const AccountUpdate = lazy(() =>
+  import("./components/AccountManagement/AccountUpdate")
+);
+const AdminAccountManagemant = lazy(() =>
+  import("./components/AccountManagement/AdminAccountManagement")
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,7 +76,6 @@ function App() {
                 minHeight: "100vh",
               }}
             >
-
               <Router>
                 <Header />
                 <Suspense
@@ -113,17 +117,36 @@ function App() {
                         path="/topics/details/:id"
                         element={<TopicDetails />}
                       />
-                      <Route path="/createclass/:id" element={<CreateClass />} />
-                      <Route path="/classes/:id/edit" element={<CreateClass />} />
+                      <Route
+                        path="/classes/:classId/topics/create"
+                        element={<AddTopic />}
+                      />
+                      <Route
+                        path="/classes/:classId/topics/:topicId/edit"
+                        element={<EditTopic />}
+                      />
+                      <Route
+                        path="/createclass/:id"
+                        element={<CreateClass />}
+                      />
+                      <Route
+                        path="/classes/:id/edit"
+                        element={<CreateClass />}
+                      />
                       <Route path="/account/:id" element={<Account />} />
-                      <Route path="/accountupdate/:id" element={<AccountUpdate />} />
-                      <Route path="/adminaccountmanagement" element={<AdminAccountManagemant />} />
+                      <Route
+                        path="/accountupdate/:id"
+                        element={<AccountUpdate />}
+                      />
+                      <Route
+                        path="/adminaccountmanagement"
+                        element={<AdminAccountManagemant />}
+                      />
                     </Routes>
                   </Box>
                 </Suspense>
                 <Footer />
               </Router>
-
             </Box>
           </ConfigProvider>
         </QueryClientProvider>
