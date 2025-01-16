@@ -160,19 +160,21 @@ function ClassListItems({
                           </>
                         }
                       />
-                      <IconButton
-                        edge="end"
-                        aria-label="View details"
-                        component={RouterLink}
-                        to={`/classes/${c.id}`}
-                        size="small"
-                        color="primary"
-                        title="View Details"
-                        sx={{ marginLeft: "auto" }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <VisibilityIcon />
-                      </IconButton>
+                      {user.role === "admin" && c.is_final_project && (
+                        <IconButton
+                          edge="end"
+                          aria-label="View details"
+                          component={RouterLink}
+                          to={`/classes/${c.id}`}
+                          size="small"
+                          color="primary"
+                          title="View Details"
+                          sx={{ marginLeft: "auto" }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <VisibilityIcon />
+                        </IconButton>
+                      )}
                     </ListItemButton>
                   </ListItem>
                 ))}
