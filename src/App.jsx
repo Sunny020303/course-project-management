@@ -14,6 +14,7 @@ import supabase from "./services/supabaseClient";
 import React, { useState, useEffect, lazy, Suspense } from "react";
 import { CircularProgress, Box } from "@mui/material";
 
+const ErrorBoundary = lazy(() => import("./components/ErrorBoundary"));
 const Header = lazy(() => import("./components/Layout/Header"));
 const Footer = lazy(() => import("./components/Layout/Footer"));
 const Login = lazy(() => import("./components/Authentication/Login"));
@@ -67,89 +68,91 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider theme={theme}>
-        <QueryClientProvider client={queryClient}>
-          <ConfigProvider>
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                minHeight: "100vh",
-              }}
-            >
-              <Router>
-                <Header />
-                <Suspense
-                  fallback={
+        <ErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <ConfigProvider>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: "100vh",
+                }}
+              >
+                <Router>
+                  <Header />
+                  <Suspense
+                    fallback={
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          height: "100vh",
+                        }}
+                      >
+                        <CircularProgress />
+                      </Box>
+                    }
+                  >
                     <Box
                       sx={{
                         display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                        height: "100vh",
+                        flexDirection: "column",
+                        minHeight: "100vh",
                       }}
                     >
-                      <CircularProgress />
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/createtopic" element={<CreateTopic />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/classes" element={<ClassList />} />
+                        <Route
+                          path="/classes/:classId"
+                          element={<ClassTopics />}
+                        />
+                        <Route
+                          path="/classes/:classId/groups"
+                          element={<GroupManagement />}
+                        />
+                        <Route
+                          path="/topics/details/:id"
+                          element={<TopicDetails />}
+                        />
+                        <Route
+                          path="/classes/:classId/topics/create"
+                          element={<AddTopic />}
+                        />
+                        <Route
+                          path="/classes/:classId/topics/:topicId/edit"
+                          element={<EditTopic />}
+                        />
+                        <Route
+                          path="/createclass/:id"
+                          element={<CreateClass />}
+                        />
+                        <Route
+                          path="/classes/:id/edit"
+                          element={<CreateClass />}
+                        />
+                        <Route path="/account/:id" element={<Account />} />
+                        <Route
+                          path="/accountupdate/:id"
+                          element={<AccountUpdate />}
+                        />
+                        <Route
+                          path="/adminaccountmanagement"
+                          element={<AdminAccountManagemant />}
+                        />
+                      </Routes>
                     </Box>
-                  }
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      minHeight: "100vh",
-                    }}
-                  >
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/createtopic" element={<CreateTopic />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/register" element={<Register />} />
-                      <Route path="/classes" element={<ClassList />} />
-                      <Route
-                        path="/classes/:classId"
-                        element={<ClassTopics />}
-                      />
-                      <Route
-                        path="/classes/:classId/groups"
-                        element={<GroupManagement />}
-                      />
-                      <Route
-                        path="/topics/details/:id"
-                        element={<TopicDetails />}
-                      />
-                      <Route
-                        path="/classes/:classId/topics/create"
-                        element={<AddTopic />}
-                      />
-                      <Route
-                        path="/classes/:classId/topics/:topicId/edit"
-                        element={<EditTopic />}
-                      />
-                      <Route
-                        path="/createclass/:id"
-                        element={<CreateClass />}
-                      />
-                      <Route
-                        path="/classes/:id/edit"
-                        element={<CreateClass />}
-                      />
-                      <Route path="/account/:id" element={<Account />} />
-                      <Route
-                        path="/accountupdate/:id"
-                        element={<AccountUpdate />}
-                      />
-                      <Route
-                        path="/adminaccountmanagement"
-                        element={<AdminAccountManagemant />}
-                      />
-                    </Routes>
-                  </Box>
-                </Suspense>
-                <Footer />
-              </Router>
-            </Box>
-          </ConfigProvider>
-        </QueryClientProvider>
+                  </Suspense>
+                  <Footer />
+                </Router>
+              </Box>
+            </ConfigProvider>
+          </QueryClientProvider>
+        </ErrorBoundary>
       </ThemeProvider>
     </AuthProvider>
   );
