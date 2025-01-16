@@ -399,18 +399,107 @@ export const updateTopic = async (topicData) => {
   }
 };
 
-export const getTopic = async (topicId) => {
+export const getTopic = async (topicId, user) => {
   try {
     const { data, error } = await supabase
       .from("topics")
-      .select("*")
+      .select(`*, lecturer: lecturer_id(full_name), class: class_id(*)`)
       .eq("id", topicId)
       .single();
 
-    if (error) throw error;
-    return { data, error: null };
+    if (error) {
+      throw error;
+    }
+
+    const { data: registeredGroup, error: studentGroupError } = await supabase
+      .from("student_groups")
+      .select(`*, student_group_members(*, users: student_id(*))`)
+      .eq("topic_id", data.id)
+      .maybeSingle();
+
+    if (studentGroupError) throw studentGroupError;
+
+    const members = registeredGroup?.student_group_members || [];
+    let registeredByUser = false;
+    if (user) {
+      registeredByUser = members.some(
+        (member) => member.student_id === user.id
+      );
+    }
+
+    return {
+      data: {
+        ...data,
+        student_group_members: members,
+        registered_group: registeredGroup,
+        student_ids: members.map((member) => member.student_id),
+        registeredByUser,
+      },
+      error: null,
+    };
   } catch (error) {
     console.error("Error fetching topic:", error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const updateTopicResult = async (groupId, resultData) => {
+  try {
+    const { data: existingResult, error: fetchError } = await supabase
+      .from("topic_results")
+      .select("*")
+      .eq("student_group_id", groupId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    let resultError = null;
+    if (existingResult) {
+      const { error: updateError } = await supabase
+        .from("topic_results")
+        .update({
+          report_url: resultData.report_url,
+          score: resultData.score,
+          notes: resultData.notes,
+        })
+        .eq("id", existingResult.id);
+
+      resultError = updateError;
+    } else {
+      const { error: insertError } = await supabase
+        .from("topic_results")
+        .insert({
+          student_group_id: groupId,
+          report_url: resultData.report_url,
+          score: resultData.score,
+          notes: resultData.notes,
+        });
+
+      resultError = insertError;
+    }
+
+    if (resultError) throw resultError;
+
+    return { error: null };
+  } catch (error) {
+    console.error("Error updating topic result:", error);
+    return { error: error.message };
+  }
+};
+
+export const getTopicResult = async (groupId) => {
+  try {
+    const { data, error } = await supabase
+      .from("topic_results")
+      .select("*")
+      .eq("student_group_id", groupId)
+      .single();
+
+    if (error && error.code !== "PGRST116") throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error fetching topic result:", error);
     return { data: null, error: error.message };
   }
 };

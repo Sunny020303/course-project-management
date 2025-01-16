@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { Button, Alert, CircularProgress } from "@mui/material";
+import {
+  Button,
+  Alert,
+  CircularProgress,
+  Tooltip,
+  IconButton,
+} from "@mui/material";
 import {
   Cancel as CancelIcon,
   SwapHoriz as SwapHorizIcon,
+  Group as GroupIcon,
 } from "@mui/icons-material";
 import moment from "moment";
 import {
@@ -150,15 +157,26 @@ function RegistrationStatus({
 
   if (topic.registeredByUser) {
     return (
-      <Button
-        size="small"
-        variant="outlined"
-        color="error"
-        onClick={() => handleCancelRegistration(topic)}
-        disabled={registerLoading}
-      >
-        {registerLoading ? <CircularProgress size={20} /> : "Hủy đăng ký"}
-      </Button>
+      <div>
+        <Tooltip title="Quản lý nhóm">
+          <IconButton
+            color="primary"
+            onClick={() => navigate(`/classes/${classId}/groups`)}
+            sx={{ marginRight: 13 }}
+          >
+            <GroupIcon />
+          </IconButton>
+        </Tooltip>
+        <Button
+          size="small"
+          variant="outlined"
+          color="error"
+          onClick={() => handleCancelRegistration(topic)}
+          disabled={registerLoading}
+        >
+          {registerLoading ? <CircularProgress size={20} /> : "Hủy đăng ký"}
+        </Button>
+      </div>
     );
   }
 

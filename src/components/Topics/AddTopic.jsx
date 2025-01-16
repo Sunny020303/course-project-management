@@ -34,7 +34,6 @@ function AddTopic() {
   const [approvalDeadline, setApprovalDeadline] = useState(
     moment().format("YYYY-MM-DDTHH:mm")
   );
-  const [isFinalProject, setIsFinalProject] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -59,9 +58,6 @@ function AddTopic() {
         break;
       case "approval_deadline":
         setApprovalDeadline(value);
-        break;
-      case "is_final_project":
-        setIsFinalProject(value === "true");
         break;
       default:
         break;
@@ -96,7 +92,6 @@ function AddTopic() {
         registration_deadline: registrationDeadline,
         report_submission_deadline: reportSubmissionDeadline,
         approval_deadline: approvalDeadline,
-        is_final_project: isFinalProject,
       });
 
       if (createError) throw createError;
@@ -108,7 +103,6 @@ function AddTopic() {
       setRegistrationDeadline(moment().format("YYYY-MM-DDTHH:mm"));
       setReportSubmissionDeadline(moment().format("YYYY-MM-DDTHH:mm"));
       setApprovalDeadline(moment().format("YYYY-MM-DDTHH:mm"));
-      setIsFinalProject(false);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -173,22 +167,6 @@ function AddTopic() {
                 error={maxMembers < 1 && error}
                 helperText={maxMembers < 1 && error}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel id="final-project-label">Loại đề tài</InputLabel>
-                <Select
-                  labelId="final-project-label"
-                  id="is_final_project"
-                  name="is_final_project"
-                  value={isFinalProject}
-                  onChange={handleInputChange}
-                  label="Loại đề tài"
-                >
-                  <MenuItem value={false}>Đề tài nhỏ</MenuItem>
-                  <MenuItem value={true}>Đề tài lớn</MenuItem>
-                </Select>
-              </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField

@@ -144,25 +144,6 @@ function ClassTopics() {
     setSelectedTopic(null);
   };
 
-  const handleRegisterTopic = async (topic) => {
-    setRegisterError(null);
-    setRegisterLoading(true);
-
-    try {
-      // ... other code
-
-      // Cập nhật danh sách topics sau khi đăng ký thành công
-      await fetchTopics();
-
-      // ... other code
-    } catch (error) {
-      // ... other code
-    } finally {
-      setRegisterLoading(false);
-      setRegistrationSuccess(false);
-    }
-  };
-
   const handleSearchChange = (event) => {
     setSearchQuery(event.target.value);
     setCurrentPage(1);
@@ -530,8 +511,8 @@ function ClassTopics() {
 
   if (
     user &&
-    user.role === "lecturer" &&
-    currentClass.lecturer_id !== user.id
+    ((user.role === "lecturer" && currentClass.lecturer_id !== user.id) ||
+      (user.role === "admin" && currentClass.is_final_project))
   ) {
     return (
       <Alert severity="error">
@@ -712,6 +693,7 @@ function ClassTopics() {
                 {registeredTopics.map((topic) => (
                   <Grid item xs={12} sm={6} md={4} key={topic.id}>
                     <TopicCard
+                      currentClass={currentClass}
                       topic={topic}
                       userGroup={userGroup}
                       swapRequests={swapRequests}
@@ -738,6 +720,7 @@ function ClassTopics() {
             {unregisteredTopics.map((topic) => (
               <Grid item xs={12} sm={6} md={4} key={topic.id}>
                 <TopicCard
+                  currentClass={currentClass}
                   topic={topic}
                   userGroup={userGroup}
                   swapRequests={swapRequests}

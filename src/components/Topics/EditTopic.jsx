@@ -95,6 +95,18 @@ function EditTopic() {
     return <Container maxWidth="md">Không tìm thấy đề tài.</Container>;
   }
 
+  if (
+    user &&
+    ((user.role === "lecturer" && topic.class.lecturer_id !== user.id) ||
+      (user.role === "admin" && topic.class.is_final_project))
+  ) {
+    return (
+      <Alert severity="error">
+        Bạn không phải là giảng viên của lớp học này.
+      </Alert>
+    );
+  }
+
   return (
     <Container maxWidth="md">
       <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
@@ -152,22 +164,6 @@ function EditTopic() {
                 error={topic.max_members < 1 && error}
                 helperText={topic.max_members < 1 && error}
               />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel id="final-project-label">Loại đề tài</InputLabel>
-                <Select
-                  labelId="final-project-label"
-                  id="is_final_project"
-                  name="is_final_project"
-                  value={topic.is_final_project}
-                  onChange={handleInputChange}
-                  label="Loại đề tài"
-                >
-                  <MenuItem value={false}>Đề tài nhỏ</MenuItem>
-                  <MenuItem value={true}>Đề tài lớn</MenuItem>
-                </Select>
-              </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField

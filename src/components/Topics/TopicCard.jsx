@@ -43,6 +43,7 @@ import {
 } from "../../services/topicService";
 
 const TopicCard = React.memo(function TopicCard({
+  currentClass,
   topic,
   userGroup,
   swapRequests,
@@ -326,10 +327,14 @@ const TopicCard = React.memo(function TopicCard({
       <CardActions
         sx={{
           justifyContent:
-            user?.role === "lecturer" ? "space-between" : "flex-end",
+            user?.role === "lecturer"
+              ? "space-between"
+              : user?.role === "admin"
+              ? "space-between"
+              : "flex-end",
         }}
       >
-        {user?.role === "lecturer" && (
+        {(user?.role === "lecturer" || user?.role === "admin") && (
           <>
             <Tooltip title="Chỉnh sửa">
               <IconButton
@@ -358,42 +363,89 @@ const TopicCard = React.memo(function TopicCard({
               </IconButton>
             </Tooltip>
 
-            <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
-              {selectedTopic && (
-                <>
-                  <MenuItem
-                    onClick={() => handleApproveTopic(selectedTopic.id)}
-                    disabled={approvingTopic === selectedTopic.id}
-                  >
-                    {approvingTopic === selectedTopic.id ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      "Phê duyệt"
-                    )}
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => handleRejectTopic(selectedTopic.id)}
-                    disabled={approvingTopic === selectedTopic.id}
-                  >
-                    {approvingTopic === selectedTopic.id ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      "Từ chối"
-                    )}
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => handleDeleteTopic(selectedTopic.id)}
-                    disabled={deletingTopic === selectedTopic.id}
-                  >
-                    {deletingTopic === selectedTopic.id ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      "Xóa"
-                    )}
-                  </MenuItem>
-                </>
-              )}
-            </Menu>
+            {user?.role === "admin" && currentClass?.is_final_project && (
+              <Box>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="success"
+                  onClick={() => handleApproveTopic(topic.id)}
+                  disabled={
+                    approvingTopic === topic.id ||
+                    topic.approval_status === "approved" ||
+                    moment().isAfter(topic.approval_deadline)
+                  }
+                >
+                  {approvingTopic === topic.id ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    "Duyệt"
+                  )}
+                </Button>
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="error"
+                  onClick={() => handleRejectTopic(topic.id)}
+                  disabled={
+                    approvingTopic === topic.id ||
+                    topic.approval_status === "rejected" ||
+                    moment().isAfter(topic.approval_deadline)
+                  }
+                >
+                  {approvingTopic === topic.id ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    "Từ chối"
+                  )}
+                </Button>
+              </Box>
+            )}
+
+            {user?.role === "lecturer" && !currentClass?.is_final_project && (
+              <Menu anchorEl={anchorEl} open={open} onClose={handleClose}>
+                {selectedTopic && (
+                  <>
+                    <MenuItem
+                      onClick={() => handleApproveTopic(selectedTopic.id)}
+                      disabled={
+                        approvingTopic === selectedTopic.id ||
+                        moment().isAfter(topic.approval_deadline)
+                      }
+                    >
+                      {approvingTopic === selectedTopic.id ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        "Phê duyệt"
+                      )}
+                    </MenuItem>
+                    <MenuItem
+                      onClick={() => handleRejectTopic(selectedTopic.id)}
+                      disabled={
+                        approvingTopic === selectedTopic.id ||
+                        moment().isAfter(topic.approval_deadline)
+                      }
+                    >
+                      {approvingTopic === selectedTopic.id ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        "Từ chối"
+                      )}
+                    </MenuItem>
+                    <MenuItem
+                      onClick={() => handleDeleteTopic(selectedTopic.id)}
+                      disabled={deletingTopic === selectedTopic.id}
+                    >
+                      {deletingTopic === selectedTopic.id ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        "Xóa"
+                      )}
+                    </MenuItem>
+                  </>
+                )}
+              </Menu>
+            )}
           </>
         )}
 
