@@ -5,7 +5,7 @@ export const getAllTopics = async () => {
   try {
     const { data, error } = await supabase
       .from("topics")
-      .select(`*, lecturer: lecturer_id(full_name), classes(*)`);
+      .select(`*, lecturer: lecturer_id(full_name, lecturer_code), classes(*)`);
 
     if (error) {
       throw error;

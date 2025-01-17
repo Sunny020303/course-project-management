@@ -25,9 +25,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Autocomplete,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { getAllTopics } from "../../services/topicService";
 import { useAuth } from "../../context/AuthContext";
 import { getStudents } from "../../services/userService";
@@ -62,9 +63,12 @@ function TopicList() {
   const [sortBy, setSortBy] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [selectedStudent, setSelectedStudent] = useState("");
+  const [selectedLecturer, setSelectedLecturer] = useState("");
   const [selectedSemester, setSelectedSemester] = useState("");
+  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState("");
 
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   const fetchTopics = useCallback(async () => {
@@ -73,7 +77,15 @@ function TopicList() {
     try {
       const { data, error } = await getAllTopics();
       if (error) throw error;
-      setTopics(data);
+      if (user.role === "student")
+        setTopics(
+          data.filter((topic) =>
+            topic.student_group_members.some(
+              (member) => member.users.id === user.id
+            )
+          )
+        );
+      else setTopics(data);
     } catch (error) {
       setError(error.message);
       console.error("Error fetching all topics:", error);
@@ -114,8 +126,8 @@ function TopicList() {
     setPage(0);
   };
 
-  const handleStudentChange = (event) => {
-    setSelectedStudent(event.target.value);
+  const handleLecturerChange = (event, newValue) => {
+    setSelectedLecturer(newValue);
     setPage(0);
   };
 
@@ -124,15 +136,44 @@ function TopicList() {
     setPage(0);
   };
 
+  const handleClassChange = (event, newValue) => {
+    setSelectedClass(newValue);
+    setPage(0);
+  };
+
+  const handleStudentChange = (event, newValue) => {
+    setSelectedStudent(newValue);
+    setPage(0);
+  };
+
+  const uniqueLecturers = useMemo(() => {
+    const lecturers = topics
+      .map((topic) => topic.lecturer?.full_name)
+      .filter(Boolean);
+    return Array.from(new Set(lecturers)).sort((a, b) =>
+      a.name?.localeCompare(b.name)
+    );
+  }, [topics]);
+
+  const uniqueSemesters = useMemo(() => {
+    const semesters = topics.map((topic) => topic.classes.semester);
+    return Array.from(new Set(semesters)).sort((a, b) => b - a);
+  }, [topics]);
+
+  const uniqueClasses = useMemo(() => {
+    const classes = topics.map((topic) => topic.classes.name);
+    return Array.from(new Set(classes.map(JSON.stringify)))
+      .map(JSON.parse)
+      .sort((a, b) => a.name?.localeCompare(b.name));
+  }, [topics]);
+
   const uniqueStudents = useMemo(() => {
     const students = topics.flatMap((topic) =>
       topic.student_group_members.map((member) => member.users.full_name)
     );
-    return Array.from(new Set(students));
-  }, [topics]);
-
-  const uniqueSemesters = useMemo(() => {
-    return Array.from(new Set(topics.map((topic) => topic.classes.semester)));
+    return Array.from(new Set(students.map(JSON.stringify)))
+      .map(JSON.parse)
+      .sort((a, b) => a.name?.localeCompare(b.name));
   }, [topics]);
 
   const filteredTopics = useMemo(() => {
@@ -141,26 +182,34 @@ function TopicList() {
     }
 
     let filtered = topics.filter((topic) => {
-      const searchMatch = topic.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
+      const searchMatch =
+        topic.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        topic.description.toLowerCase().includes(searchQuery.toLowerCase());
       const statusMatch = selectedStatus
         ? topic.approval_status === selectedStatus
+        : true;
+      const lecturerMatch = selectedLecturer
+        ? topic.lecturer?.full_name === selectedLecturer
+        : true;
+      const semesterMatch = selectedSemester
+        ? topic.classes.semester === selectedSemester
+        : true;
+      const classMatch = selectedClass
+        ? topic.classes.name === selectedClass
         : true;
       const studentMatch = selectedStudent
         ? topic.student_group_members.some(
             (member) => member.users.full_name === selectedStudent
           )
         : true;
-      const semesterMatch = selectedSemester
-        ? topic.classes.semester === selectedSemester
-        : true;
       return (
         topic.registered_group &&
         searchMatch &&
         statusMatch &&
-        studentMatch &&
-        semesterMatch
+        lecturerMatch &&
+        semesterMatch &&
+        classMatch &&
+        studentMatch
       );
     });
 
@@ -200,8 +249,10 @@ function TopicList() {
     sortBy,
     searchQuery,
     selectedStatus,
-    selectedStudent,
+    selectedLecturer,
     selectedSemester,
+    selectedClass,
+    selectedStudent,
     sortOrder,
   ]);
 
@@ -237,9 +288,22 @@ function TopicList() {
     }
   };
 
+  const formatSemester = (semester) => {
+    if (!semester) return "";
+    const year = semester.toString().substring(0, 4);
+    const term = semester.toString().substring(4);
+    const termName = term === "3" ? "Hè" : term;
+    return `${year} - ${termName}`;
+  };
+
   const emptyRows =
     rowsPerPage -
     Math.min(rowsPerPage, filteredTopics.length - page * rowsPerPage);
+
+  if (!user) {
+    navigate("/login", { replace: true });
+    return null;
+  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -282,42 +346,45 @@ function TopicList() {
           </FormControl>
         </Grid>
         <Grid item xs={12} md={3}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel id="student-select-label">Sinh viên</InputLabel>
-            <Select
-              labelId="student-select-label"
-              id="student-select"
-              value={selectedStudent}
-              label="Sinh viên"
-              onChange={handleStudentChange}
-            >
-              <MenuItem value="">Tất cả</MenuItem>
-              {uniqueStudents.map((student) => (
-                <MenuItem key={student} value={student}>
-                  {student}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Autocomplete
+            options={uniqueLecturers}
+            value={selectedLecturer}
+            onChange={handleLecturerChange}
+            renderInput={(params) => (
+              <TextField {...params} label="Giảng viên" variant="outlined" />
+            )}
+          />
         </Grid>
         <Grid item xs={12} md={3}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel id="semester-select-label">Học kỳ</InputLabel>
-            <Select
-              labelId="semester-select-label"
-              id="semester-select"
-              value={selectedSemester}
-              label="Học kỳ"
-              onChange={handleSemesterChange}
-            >
-              <MenuItem value="">Tất cả</MenuItem>
-              {uniqueSemesters.map((semester) => (
-                <MenuItem key={semester} value={semester}>
-                  {semester}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Autocomplete
+            options={uniqueSemesters}
+            getOptionLabel={(option) => formatSemester(option)}
+            value={selectedSemester}
+            onChange={handleSemesterChange}
+            renderInput={(params) => (
+              <TextField {...params} label="Học kỳ" variant="outlined" />
+            )}
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Autocomplete
+            options={uniqueClasses}
+            value={selectedClass}
+            onChange={handleClassChange}
+            renderInput={(params) => (
+              <TextField {...params} label="Lớp" variant="outlined" />
+            )}
+          />
+        </Grid>
+        <Grid item xs={12} md={3}>
+          <Autocomplete
+            options={uniqueStudents}
+            value={selectedStudent}
+            onChange={handleStudentChange}
+            renderInput={(params) => (
+              <TextField {...params} label="Sinh viên" variant="outlined" />
+            )}
+          />
         </Grid>
       </Grid>
 
@@ -473,7 +540,9 @@ function TopicList() {
                           )}
                         </TableCell>
                         <TableCell>{topic.classes?.name}</TableCell>
-                        <TableCell>{topic.classes?.semester}</TableCell>
+                        <TableCell>
+                          {formatSemester(topic.classes?.semester)}
+                        </TableCell>
                       </TableRow>
                     ))
                 ) : (

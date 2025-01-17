@@ -110,6 +110,11 @@ function AddTopic() {
     }
   };
 
+  if (!user) {
+    navigate("/login", { replace: true });
+    return null;
+  }
+
   return (
     <Container maxWidth="md">
       <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
