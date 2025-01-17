@@ -3,95 +3,224 @@ import {
   Button,
   Container,
   Typography,
-  TextField,
-  MenuItem
+  Chip,
+  Switch,
+  Box
 } from "@mui/material";
 import { DataGrid } from '@mui/x-data-grid';
-import { getAccountList } from '../../services/userService';
+import { getStudentAccountList, DeleteUserById, getLecturerAndAdminAccountList } from '../../services/userService';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useNavigate } from 'react-router-dom';
+import { Add } from "@mui/icons-material";
+import AttachFileIcon from '@mui/icons-material/AttachFile';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
 export default function AdminAccountManagement() {
-  const navigate= useNavigate();
-  const [accountList, setAccountList] = useState([{id: "123", full_name: "Duong", email: "neko",departments: {name: "doanxem"}}]);
-  const [lecturerList, setLectturerList] = useState(false);
+  const navigate = useNavigate();
+  const [accountList, setAccountList] = useState([{ id: "123", full_name: "Duong", email: "neko", departments: { name: "doanxem" } }]);
+  const [lecturerList, setLectturerList] = useState([{ id: "123", full_name: "Duong", email: "neko", departments: { name: "doanxem" } }]);
+  const [listType, setListType] = useState(true);
   useEffect(() => {
-    const listOfAccount = getAccountList();
-    listOfAccount.then((data) => {
+    const listOfStudentAccount = getStudentAccountList();
+    listOfStudentAccount.then((data) => {
       setAccountList(data.data);
-      console.log(data.data);
+      //console.log(data.data);
+    })
+    const listOfLecturerAccount = getLecturerAndAdminAccountList();
+    listOfLecturerAccount.then((data) => {
+      setLectturerList(data.data);
+      //console.log(data.data);
     })
   }, [])
   const columns = [
-    { field: 'student_code', headerName: 'ID', width: 100 },
+    {
+      field: 'student_code',
+      headerName: 'ID',
+      width: 100,
+    },
     {
       field: 'full_name',
       headerName: 'Họ và tên',
-      width: 200,
+      width: 180,
       editable: false,
     },
     {
       field: 'email',
       headerName: 'Email',
-      width: 250,
+      width: 230,
       editable: false,
     },
     {
       field: 'departments',
       headerName: 'Khoa',
-      width: 300,
+      width: 250,
       editable: false,
       valueGetter: (params) => params.name
     },
     {
+      field: 'role',
+      headerName: 'Phân loại',
+      width: 130,
+      editable: false,
+      renderCell: (params) => {
+        return (
+          <Chip label={params.row.role} color={params.row.role === "student" ? 'secondary' : params.row.role === "lecturer" ? 'primary' : 'error'} />
+        );
+      },
+    },
+    {
       field: 'actions',
       headerName: 'Actions',
-      width: 250,
+      width: 200,
       renderCell: (params) => {
         const handleDeleteClick = (id) => {
           console.log(`Delete row with id: ${id}`);
-          // Xử lý logic xóa ở đây
+          //DeleteUserById(id);
         };
-          const handleEditClick = (id) => {
-              console.log(`Edit row with id: ${id}`);
-              // Xử lý logic edit ở đây
-          }
-  
+        const handleEditClick = (id) => {
+          console.log(`Edit row with id: ${id}`);
+          // Xử lý logic edit ở đây
+          navigate(`/accountupdate/${id}`);
+        }
+
         return (
           <div>
             <Button
               variant="outlined"
               color="error"
               startIcon={<DeleteIcon />}
-              sx={{width: 90, marginRight: 2}}
+              sx={{ width: 80, marginRight: 1 }}
               onClick={() => handleDeleteClick(params.id)}
             >
               Xóa
             </Button>
-              <Button
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<EditIcon />}
-                  sx={{width: 90}}
-                  onClick={() => navigate(`/accountupdate/${params.id}`)}
-              >
-                  Sửa
-              </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<EditIcon />}
+              sx={{ width: 80 }}
+              onClick={() => handleEditClick(params.id)}
+            >
+              Sửa
+            </Button>
           </div>
         );
       },
     },
   ];
 
-  const handleRowClick = (params) =>{
+  const columnsLecturer = [
+    {
+      field: 'lecturer_code',
+      headerName: 'ID',
+      width: 100,
+    },
+    {
+      field: 'full_name',
+      headerName: 'Họ và tên',
+      width: 180,
+      editable: false,
+    },
+    {
+      field: 'email',
+      headerName: 'Email',
+      width: 230,
+      editable: false,
+    },
+    {
+      field: 'departments',
+      headerName: 'Khoa',
+      width: 250,
+      editable: false,
+      valueGetter: (params) => params.name
+    },
+    {
+      field: 'role',
+      headerName: 'Phân loại',
+      width: 130,
+      editable: false,
+      renderCell: (params) => {
+        return (
+          <Chip label={params.row.role} color={params.row.role === "student" ? 'secondary' : params.row.role === "lecturer" ? 'primary' : 'error'} />
+        );
+      },
+    },
+    {
+      field: 'actions',
+      headerName: 'Actions',
+      width: 200,
+      renderCell: (params) => {
+        const handleDeleteClick = (id) => {
+          console.log(`Delete row with id: ${id}`);
+          //DeleteUserById(id);
+        };
+        const handleEditClick = (id) => {
+          console.log(`Edit row with id: ${id}`);
+          // Xử lý logic edit ở đây
+          navigate(`/accountupdate/${id}`);
+        }
+
+        return (
+          <div>
+            <Button
+              variant="outlined"
+              color="error"
+              startIcon={<DeleteIcon />}
+              sx={{ width: 80, marginRight: 1 }}
+              onClick={() => handleDeleteClick(params.id)}
+            >
+              Xóa
+            </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<EditIcon />}
+              sx={{ width: 80 }}
+              onClick={() => handleEditClick(params.id)}
+            >
+              Sửa
+            </Button>
+          </div>
+        );
+      },
+    },
+  ];
+
+  const handleRowClick = (params) => {
     console.log(params);
   }
   return (
-    <Container sx={{ flexGrow: 1, marginTop: 2, justifyItems: "center", width: "100%" }}>
+    <Container sx={{ flexGrow: 1, justifyItems: "center", width: "100%" }}>
+      <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: "100%", marginTop: 2, marginBottom: 2 }}>
+        <Box>
+          <Button variant="outlined" onClick={() => {
+            navigate("/register");
+          }} sx={{ marginRight: 1 }}>
+            <Add sx={{ marginRight: 1 }} /> Thêm lớp tài khoản mới
+          </Button>
+          <Button variant="outlined" onClick={() => {
+            ////handleImportFile();
+          }} sx={{ marginRight: 1 }}>
+            <AttachFileIcon sx={{ marginRight: 1 }} /> Import file
+          </Button>
+          <Button variant="outlined" onClick={() => {
+            //handleExportFile();
+          }} sx={{ marginRight: 1 }}>
+            <FileDownloadIcon sx={{ marginRight: 1 }} /> Export file
+          </Button>
+        </Box>
+
+
+        <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' }}>
+          <Typography variant='subtitle2'>Danh sách sinh viên</Typography>
+          <Switch name='lecturerList' onChange={() => setListType(!listType)} />
+          <Typography variant='subtitle2'>Danh sách giảng viên</Typography>
+        </Box>
+      </Box>
       <DataGrid
-        rows={accountList}
-        columns={columns}
+        rows={listType ? accountList : lecturerList}
+        columns={listType ? columns : columnsLecturer}
         initialState={{
           pagination: {
             paginationModel: {
@@ -99,11 +228,11 @@ export default function AdminAccountManagement() {
             },
           },
         }}
-        sx={{width: "100%"}}
+        sx={{ width: "100%" }}
         pageSizeOptions={[10]}
         checkboxSelection
         disableRowSelectionOnClick
-        //onRowClick={(e)=>handleRowClick(e)}
+      //onRowClick={(e)=>handleRowClick(e)}
       />
     </Container>
   )

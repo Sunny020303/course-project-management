@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { data, useNavigate, useParams } from "react-router-dom";
 import { getSubject } from "../../services/subjectService";
-import { CreateUpdateClass } from "../../services/classService";
+import { CreateUpdateClass, getClassDetails } from "../../services/classService";
 import { getLecturerBySubject } from "../../services/userService";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -9,7 +9,8 @@ import {
   Container,
   Typography,
   TextField,
-  MenuItem
+  MenuItem,
+  Switch,
 } from "@mui/material";
 import { InputNumber } from 'antd';
 
@@ -17,19 +18,22 @@ import { InputNumber } from 'antd';
 //import SearchIcon from "@mui/icons-material/Search";
 //import ClassListItems from "./ClassListItems";
 function ClassCreate() {
+  const date = new Date();
   const { user } = useAuth();
   const navigate = useNavigate();
   //dùng cho quá trình update
   const { id } = useParams();
   const [loading, setLoading] = useState(false);
+
   const [name, setName] = useState("");
   const [classCode, setClassCode] = useState("");
   const [idLecturer, setIdLecturer] = useState("");
   const [idSubject, setIdSubject] = useState("");
-  const [year, setYear] = useState(2024);
+  const [year, setYear] = useState(date.getFullYear());
   const [semester, setSemester] = useState(1);
-  const [subjectList, setSubjectList] = useState([]);
+  const [isFinal, setIsFinal] = useState(false);
 
+  const [subjectList, setSubjectList] = useState([]);
   const [idDepartment, setIdDepartment] = useState("");
   const [lecturerList, setLecturerList] = useState([]);
 
@@ -58,7 +62,22 @@ function ClassCreate() {
     else {
       if(id==='new'){
         if (user.role !== "admin") navigate("/classes", { replace: true });
-      } else if(user.role !=="lecturer") navigate("/classes", { replace: true });
+      } else if(user.role !=="lecturer" && user.role !=="admin") navigate("/classes", { replace: true });
+      else {
+        const classInfo= getClassDetails(id);
+        classInfo.then((data)=>{
+          //console.log(data.data.subject_id);
+          setIdSubject(data.data.subject_id);
+          setIdDepartment(data.data.subjects.department_id);
+          setIdLecturer(data.data.lecturer_id);
+          setClassCode(data.data.class_code);
+          setName(data.data.name);
+          setSemester(data.data.semester-(Math.floor(data.data.semester/10))*10);
+          setYear(Math.floor(data.data.semester/10));
+          setIsFinal(data.data.is_final_project);
+        })
+        
+      }
     }
   }, [user, navigate]);
 
@@ -72,6 +91,7 @@ function ClassCreate() {
       idLecturer,
       semester + "",
       year + "",
+      isFinal,
     );
     ClassCreate.then((data) => {
       //console.log(data.data);
@@ -152,17 +172,23 @@ function ClassCreate() {
 
 
         <div style={{ display: 'flex', marginTop: 20, marginBottom: 20, alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: 'flex', width: '50%', alignItems: "center" }}>
-            <Typography variant="h6" width={"20%"}>
+          <div style={{ display: 'flex', width: '30%', alignItems: "center" }}>
+            <Typography variant="h6" width={"45%"}>
               Học kỳ
             </Typography>
-            <InputNumber min={1} max={3} defaultValue={1} onChange={(e) => setSemester(e)} style={{ width: '50%', borderRadius: 5, height: 50, fontSize: 17, alignContent: 'center' }} />
+            <InputNumber min={1} max={3} value={semester} onChange={(e) => setSemester(e)} style={{ width: '50%', borderRadius: 5, height: 50, fontSize: 17, alignContent: 'center' }} />
           </div>
-          <div style={{ display: 'flex', width: '50%', alignItems: "center" }}>
-            <Typography variant="h6" width={"27%"}>
+          <div style={{ display: 'flex', width: '30%', alignItems: "center" }}>
+            <Typography variant="h6" width={"50%"}>
               Năm học
             </Typography>
-            <InputNumber min={2000} max={2100} defaultValue={2024} onChange={(e) => setYear(e)} style={{ width: '50%', borderRadius: 5, height: 50, fontSize: 17, alignContent: 'center' }} />
+            <InputNumber min={2000} max={2100} value={year} onChange={(e) => setYear(e)} style={{ width: '50%', borderRadius: 5, height: 50, fontSize: 17, alignContent: 'center' }} />
+          </div>
+          <div style={{ display: 'flex', width: '30%', alignItems: "center" }}>
+            <Typography variant="h6" width={"60%"}>
+              Final Project
+            </Typography>
+            <Switch name='lecturerList' checked={isFinal} size="large" onChange={() => setIsFinal(!isFinal)} />
           </div>
 
         </div>

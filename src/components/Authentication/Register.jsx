@@ -30,10 +30,7 @@ function Register() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirect nếu đã đăng nhập
-    if (user) {
-      navigate("/classes", { replace: true });
-    }
+   
   }, [navigate, user]);
 
   useEffect(() => {
@@ -68,7 +65,8 @@ function Register() {
       );
       if (error) throw error;
 
-      navigate("/login?registered=true", { replace: true });
+      //navigate("/login?registered=true", { replace: true });
+      navigate("/adminaccountmanagement")
     } catch (error) {
       setError(error.message);
       console.error("Error registering user:", error);
@@ -190,9 +188,7 @@ function Register() {
             </Typography>
           )}
         </form>
-        <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-          Đã có tài khoản? <Link href="/login">Đăng nhập</Link>
-        </Typography>
+        
       </Box>
     </Container>
   );

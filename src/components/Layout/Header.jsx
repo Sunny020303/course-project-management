@@ -85,7 +85,11 @@ export default function Header() {
                 handleClose();
               }}>Quản lý tài khoản admin
               </MenuItem>}
-
+              {user.role === 'admin' && <MenuItem onClick={() => {
+                navigate("/adminclassmanagement");
+                handleClose();
+              }}>Quản lý lớp học
+              </MenuItem>}
               <MenuItem onClick={() => {
                 if (handleLogout()) {
                   navigate("/login");

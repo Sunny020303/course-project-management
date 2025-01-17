@@ -128,9 +128,7 @@ function Login() {
             </Typography>
           )}
         </form>
-        <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-          Chưa có tài khoản? <Link to="/register">Đăng ký</Link>
-        </Typography>
+        
       </Box>
     </Container>
   );

@@ -24,19 +24,20 @@ export const register = async (
   lecturerCode
 ) => {
   try {
-    const { user, error } = await supabase.auth.signUp({ email, password });
+    const { data: user, error } = await supabase.auth.signUp({ email, password });
     if (error) throw error;
-
-    await supabase.from("users").insert({
-      id: user.id,
+    console.log(user.user.id);
+    const { error: errorUser } = await supabase.from("users").insert({
+      id: user.user.id,
       email: email,
+      role: role,
       full_name: fullName,
-      role,
       department_id: departmentId,
-      student_code: studentCode,
-      lecturer_code: lecturerCode,
+      lecturer_code: lecturerCode? lecturerCode : null,
+      student_code: studentCode? studentCode : null,
       created_by: user.id,
     });
+    if (errorUser) throw errorUser;
 
     return { error: null };
   } catch (error) {

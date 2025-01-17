@@ -11,6 +11,17 @@ export const getClasses = async () => {
   }
 };
 
+export const getAllClassesDetails = async () => {
+  try {
+    const { data, error } = await supabase.from("classes").select("*, subjects(name, subject_code), lecturer: lecturer_id(full_name)");
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error fetching all classes details:", error);
+    return { data: null, error: error.message };
+  }
+};
+
 export const getClassesByUser = async (user) => {
   try {
     let query = supabase
@@ -54,7 +65,7 @@ export const getClassDetails = async (classId) => {
     const { data, error } = await supabase
       .from("classes")
       .select(
-        `*, subjects(name, subject_code), lecturer: lecturer_id(full_name)`
+        `*, subjects(name, subject_code, department_id), lecturer: lecturer_id(full_name)`
       )
       .eq("id", classId)
       .single();
@@ -80,7 +91,8 @@ export const CreateUpdateClass = async (
   subjectId,
   lecturerId,
   semester,
-  year
+  year,
+  isFinalProject,
 ) => {
   try {
     if (id === "new") {
@@ -93,6 +105,7 @@ export const CreateUpdateClass = async (
             subject_id: subjectId,
             lecturer_id: lecturerId,
             semester: year + semester,
+            is_final_project: isFinalProject,
           },
         ])
         .select();
@@ -115,6 +128,7 @@ export const CreateUpdateClass = async (
             subject_id: subjectId,
             lecturer_id: lecturerId,
             semester: year + semester,
+            is_final_project: isFinalProject,
           },
         ])
         .select();
@@ -135,3 +149,51 @@ export const CreateUpdateClass = async (
     };
   }
 };
+
+export const bulkCreateClass = async (classes) => {
+  try {
+    const { data, error } = await supabase
+      .from("classes")
+      .insert(classes)
+      .select("*, subjects(name, subject_code), lecturer: lecturer_id(full_name)");
+    if (error) {
+      console.log(error);
+      throw error;
+    }
+    if (data) {
+      console.log(data);
+    }
+  } catch (e) {
+    console.error("Error create/update new class: ", e);
+  }
+}
+
+export const DeleteClassById = async (id) => {
+  try {
+    const { error } = await supabase
+      .from('classes')
+      .delete()
+      .eq('id', id);
+    if (error) {
+      console.log(error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error delete class: ", error);
+  }
+}
+
+export const BulkDeleteClassByIds = async (ids) => {
+  try {
+    const { error } = await supabase
+      .from('classes')
+      .delete()
+      .in('id', ids);
+    if (error) {
+      console.log(error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error delete multi class: ", error);
+  }
+}

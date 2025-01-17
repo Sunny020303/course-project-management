@@ -51,12 +51,43 @@ export const getAccountList = async () => {
   }
 };
 
+export const getStudentAccountList = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*, departments!department_id(name)")
+      .not('student_code', 'is',null);
+    if (error) throw error;
+
+
+    return { data: data, error: null };
+  } catch (error) {
+    console.error("Error getting students account", error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const getLecturerAndAdminAccountList = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*, departments!department_id(name)")
+      .is('student_code',null);
+    if (error) throw error;
+
+
+    return { data: data, error: null };
+  } catch (error) {
+    console.error("Error getting Lecturer and Admin account", error);
+    return { data: null, error: error.message };
+  }
+};
 export const getAccount = async (id) => {
   try {
     const { data, error } = await supabase
       .from("users")
       .select("*, departments!department_id(*)")
-      .eq("id",id)
+      .eq("id", id)
     if (error) throw error;
 
 
@@ -72,7 +103,7 @@ export const getClassUser = async (id) => {
     const { data, error } = await supabase
       .from("student_class_enrollment")
       .select("*, classes(*)")
-      .eq("student_id",id)
+      .eq("student_id", id)
     if (error) throw error;
 
 
@@ -84,27 +115,27 @@ export const getClassUser = async (id) => {
 };
 
 export const updateUser = async (id, email, role, name, idDepartment, idLecturer, idStudent) => {
-  try{
-    const {data,error} = await supabase
-    .from("users")
-        .upsert([{
-          id: id,
-          email: email,
-          role: role,
-          full_name: name,
-          department_id: idDepartment,
-          lecturer_code: idLecturer,
-          student_code: idStudent,
-        }])
-        .select();
-      if (error) {
-        console.log(error);
-        throw error;
-      }
-      if (data) {
-        console.log(data);
-      }
-      return { data: data, error: error};
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .upsert([{
+        id: id,
+        email: email,
+        role: role,
+        full_name: name,
+        department_id: idDepartment,
+        lecturer_code: idLecturer,
+        student_code: idStudent,
+      }])
+      .select();
+    if (error) {
+      //console.log(error);
+      throw error;
+    }
+    if (data) {
+      console.log(data);
+    }
+    return { data: data, error: error };
   } catch (e) {
     console.error("Error update info user data: ", e);
     return {
@@ -113,3 +144,36 @@ export const updateUser = async (id, email, role, name, idDepartment, idLecturer
     };
   }
 };
+
+export const DeleteUserById = async (id) => {
+  try {
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', id);
+    if (error) {
+      //console.log(error);
+      throw error;
+    }
+    //const { data, error: AuthError } = await supabase.auth.admin.deleteUser(id)
+    //const { error: AuthError } = await supabase.auth
+    //if (AuthError) throw AuthError;
+  } catch (error) {
+    console.error("Error delete user: ", error);
+  }
+}
+
+export const BulkDeleteUserByIds = async (ids) => {
+  try {
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .in('id', ids);
+    if (error) {
+      console.log(error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error delete multi users: ", error);
+  }
+}
