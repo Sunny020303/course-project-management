@@ -38,6 +38,9 @@ const AccountUpdate = lazy(() =>
 const AdminAccountManagemant = lazy(() =>
   import("./components/AccountManagement/AdminAccountManagement")
 );
+const AdminClassManagemant = lazy(() =>
+  import("./components/Classes/AdminClassManagement")
+);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -145,6 +148,10 @@ function App() {
                         <Route
                           path="/adminaccountmanagement"
                           element={<AdminAccountManagemant />}
+                        />
+                        <Route
+                          path="/adminclassmanagement"
+                          element={<AdminClassManagemant />}
                         />
                       </Routes>
                     </Box>
