@@ -191,7 +191,7 @@ function Register() {
           )}
         </form>
         <Typography variant="body2" align="center" sx={{ mt: 2 }}>
-          Đã có tài khoản? <Link href="/login">Đăng nhập</Link>
+          Đã có tài khoản? <Link to="/login">Đăng nhập</Link>
         </Typography>
       </Box>
     </Container>
