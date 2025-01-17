@@ -40,6 +40,7 @@ import {
   HourglassEmpty as HourglassEmptyIcon,
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon,
+  FilterList as FilterListIcon,
 } from "@mui/icons-material";
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -150,9 +151,7 @@ function TopicList() {
     const lecturers = topics
       .map((topic) => topic.lecturer?.full_name)
       .filter(Boolean);
-    return Array.from(new Set(lecturers)).sort((a, b) =>
-      a.name?.localeCompare(b.name)
-    );
+    return Array.from(new Set(lecturers)).sort((a, b) => a.localeCompare(b));
   }, [topics]);
 
   const uniqueSemesters = useMemo(() => {
@@ -164,7 +163,7 @@ function TopicList() {
     const classes = topics.map((topic) => topic.classes.name);
     return Array.from(new Set(classes.map(JSON.stringify)))
       .map(JSON.parse)
-      .sort((a, b) => a.name?.localeCompare(b.name));
+      .sort((a, b) => a.localeCompare(b));
   }, [topics]);
 
   const uniqueStudents = useMemo(() => {
@@ -173,7 +172,7 @@ function TopicList() {
     );
     return Array.from(new Set(students.map(JSON.stringify)))
       .map(JSON.parse)
-      .sort((a, b) => a.name?.localeCompare(b.name));
+      .sort((a, b) => a.localeCompare(b));
   }, [topics]);
 
   const filteredTopics = useMemo(() => {
@@ -311,82 +310,84 @@ function TopicList() {
         Danh sách đề tài
       </Typography>
 
-      <Grid container spacing={2} mb={2}>
-        <Grid item xs={12} md={4}>
-          <TextField
-            label="Tìm kiếm đề tài"
-            variant="outlined"
-            fullWidth
-            value={searchQuery}
-            onChange={handleSearchChange}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
+      <Paper elevation={2} sx={{ p: 2, mb: 2 }}>
+        <Grid container spacing={2} alignItems="center">
+          <Grid item xs={12} sm={6} md={4}>
+            <TextField
+              label="Tìm kiếm đề tài"
+              variant="outlined"
+              fullWidth
+              value={searchQuery}
+              onChange={handleSearchChange}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Autocomplete
+              options={uniqueLecturers}
+              value={selectedLecturer}
+              onChange={handleLecturerChange}
+              renderInput={(params) => (
+                <TextField {...params} label="Giảng viên" variant="outlined" />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <FormControl fullWidth variant="outlined">
+              <InputLabel id="status-select-label">Trạng thái</InputLabel>
+              <Select
+                labelId="status-select-label"
+                id="status-select"
+                value={selectedStatus}
+                label="Trạng thái"
+                onChange={handleStatusChange}
+              >
+                <MenuItem value="">Tất cả</MenuItem>
+                <MenuItem value="pending">Chờ phê duyệt</MenuItem>
+                <MenuItem value="approved">Đã phê duyệt</MenuItem>
+                <MenuItem value="rejected">Bị từ chối</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Autocomplete
+              options={uniqueSemesters}
+              getOptionLabel={(option) => formatSemester(option)}
+              value={selectedSemester}
+              onChange={handleSemesterChange}
+              renderInput={(params) => (
+                <TextField {...params} label="Học kỳ" variant="outlined" />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Autocomplete
+              options={uniqueClasses}
+              value={selectedClass}
+              onChange={handleClassChange}
+              renderInput={(params) => (
+                <TextField {...params} label="Lớp" variant="outlined" />
+              )}
+            />
+          </Grid>
+          <Grid item xs={12} sm={6} md={4}>
+            <Autocomplete
+              options={uniqueStudents}
+              value={selectedStudent}
+              onChange={handleStudentChange}
+              renderInput={(params) => (
+                <TextField {...params} label="Sinh viên" variant="outlined" />
+              )}
+            />
+          </Grid>
         </Grid>
-        <Grid item xs={12} md={2}>
-          <FormControl fullWidth variant="outlined">
-            <InputLabel id="status-select-label">Trạng thái</InputLabel>
-            <Select
-              labelId="status-select-label"
-              id="status-select"
-              value={selectedStatus}
-              label="Trạng thái"
-              onChange={handleStatusChange}
-            >
-              <MenuItem value="">Tất cả</MenuItem>
-              <MenuItem value="pending">Chờ phê duyệt</MenuItem>
-              <MenuItem value="approved">Đã phê duyệt</MenuItem>
-              <MenuItem value="rejected">Bị từ chối</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Autocomplete
-            options={uniqueLecturers}
-            value={selectedLecturer}
-            onChange={handleLecturerChange}
-            renderInput={(params) => (
-              <TextField {...params} label="Giảng viên" variant="outlined" />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Autocomplete
-            options={uniqueSemesters}
-            getOptionLabel={(option) => formatSemester(option)}
-            value={selectedSemester}
-            onChange={handleSemesterChange}
-            renderInput={(params) => (
-              <TextField {...params} label="Học kỳ" variant="outlined" />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Autocomplete
-            options={uniqueClasses}
-            value={selectedClass}
-            onChange={handleClassChange}
-            renderInput={(params) => (
-              <TextField {...params} label="Lớp" variant="outlined" />
-            )}
-          />
-        </Grid>
-        <Grid item xs={12} md={3}>
-          <Autocomplete
-            options={uniqueStudents}
-            value={selectedStudent}
-            onChange={handleStudentChange}
-            renderInput={(params) => (
-              <TextField {...params} label="Sinh viên" variant="outlined" />
-            )}
-          />
-        </Grid>
-      </Grid>
+      </Paper>
 
       {loading ? (
         <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
@@ -406,7 +407,7 @@ function TopicList() {
       ) : (
         <>
           <TableContainer component={Paper}>
-            <Table sx={{ minWidth: 800 }} aria-label="topics table">
+            <Table>
               <TableHead>
                 <TableRow>
                   <StyledTableCell
@@ -572,6 +573,12 @@ function TopicList() {
             page={page}
             onPageChange={handlePageChange}
             onRowsPerPageChange={handleRowsPerPageChange}
+            labelRowsPerPage="Số dòng trên trang:"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} trong tổng số ${
+                count !== -1 ? count : `hơn ${to}`
+              }`
+            }
           />
         </>
       )}
