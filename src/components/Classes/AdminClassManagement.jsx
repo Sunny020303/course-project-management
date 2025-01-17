@@ -166,11 +166,12 @@ export default function AdminAccountManagement() {
             width: 180,
             renderCell: (params) => {
                 const handleDeleteClick = (id) => {
-                    console.log(`Delete row with id: ${id}`);
+                    //console.log(`Delete row with id: ${id}`);
                     DeleteClassById(id);
+                    setClassList(classList.filter((i)=>i.id!==id));
                 };
                 const handleEditClick = (id) => {
-                    console.log(`Edit row with id: ${id}`);
+                    //console.log(`Edit row with id: ${id}`);
                     // Xử lý logic edit ở đây
                     navigate(`/createclass/${id}`);
                 }

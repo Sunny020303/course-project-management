@@ -15,6 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { Add } from "@mui/icons-material";
 import AttachFileIcon from '@mui/icons-material/AttachFile';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import * as XLSX from 'xlsx';
 
 export default function AdminAccountManagement() {
   const navigate = useNavigate();
@@ -33,6 +34,22 @@ export default function AdminAccountManagement() {
       //console.log(data.data);
     })
   }, [])
+
+  function exportToExcel(data, filename = 'data.xlsx') {
+    // Tạo một worksheet
+    const ws = XLSX.utils.json_to_sheet(data);
+
+    // Tạo một workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1'); // 'Sheet1' là tên của sheet
+
+    // Xuất file
+    XLSX.writeFile(wb, filename);
+  }
+
+  const handleExportFile = () => {
+    exportToExcel(listType ? accountList : lecturerList, 'AccountList.xlsx');
+  };
   const columns = [
     {
       field: 'student_code',
@@ -152,8 +169,10 @@ export default function AdminAccountManagement() {
       width: 200,
       renderCell: (params) => {
         const handleDeleteClick = (id) => {
-          console.log(`Delete row with id: ${id}`);
-          //DeleteUserById(id);
+          //console.log(`Delete row with id: ${id}`);
+          DeleteUserById(id);
+          setAccountList(accountList.filter((i) => i.id !== id));
+          setLectturerList(lecturerList.filter((i) => i.id !== id));
         };
         const handleEditClick = (id) => {
           console.log(`Edit row with id: ${id}`);
@@ -200,12 +219,12 @@ export default function AdminAccountManagement() {
             <Add sx={{ marginRight: 1 }} /> Thêm lớp tài khoản mới
           </Button>
           <Button variant="outlined" onClick={() => {
-            ////handleImportFile();
+            //handleImportFile();
           }} sx={{ marginRight: 1 }}>
             <AttachFileIcon sx={{ marginRight: 1 }} /> Import file
           </Button>
           <Button variant="outlined" onClick={() => {
-            //handleExportFile();
+            handleExportFile();
           }} sx={{ marginRight: 1 }}>
             <FileDownloadIcon sx={{ marginRight: 1 }} /> Export file
           </Button>

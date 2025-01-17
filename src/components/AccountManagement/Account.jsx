@@ -96,7 +96,7 @@ export default function Account() {
             </Typography>
           </div>
         </CardContent>
-        <CardActions sx={{ display: "flex", justifyContent: "flex-end"}}>
+        <CardActions sx={{ display: "flex", justifyContent: "flex-end" }}>
           <Button variant="outlined" onClick={() => {
             navigate(`/accountupdate/${id}`);
           }}
@@ -106,49 +106,51 @@ export default function Account() {
         </CardActions>
       </Card>
 
-      <Card
-        sx={{
-          //borderColor: topic.registeredByUser ? "green" : "default",
-          //borderWidth: topic.registeredByUser ? 2 : 1,
-          borderStyle: "solid",
-          borderWidth: 1,
-          width: "80%",
-          padding: 5,
-          marginTop: 5
-        }}
-      >
-        <Typography
-          variant='h4'
-          align='center'
-          fontWeight="bold"
+      {userInfo.role !== 'admin' &&
+        <Card
+          sx={{
+            //borderColor: topic.registeredByUser ? "green" : "default",
+            //borderWidth: topic.registeredByUser ? 2 : 1,
+            borderStyle: "solid",
+            borderWidth: 1,
+            width: "80%",
+            padding: 5,
+            marginTop: 5
+          }}
         >
-          Cách lớp đã đăng ký
-        </Typography>
-        <CardContent>
-          {classList.map((i) => {
-            return (
-              <Link
-                component={RouterLink}
-                to={`/classes/${i.class_id}`}
-              >
-                <div style={{ display: 'flex', alignItems: "center", marginBottom: 10 }}>
+          <Typography
+            variant='h4'
+            align='center'
+            fontWeight="bold"
+          >
+            Cách lớp đã {userInfo.role === "student" ? "Đăng ký" : "giảng dạy"}
+          </Typography>
+          <CardContent>
+            {classList.map((i) => {
+              return (
+                <Link
+                  component={RouterLink}
+                  to={`/classes/${i.class_id}`}
+                >
+                  <div style={{ display: 'flex', alignItems: "center", marginBottom: 10 }}>
 
-                  <Typography variant='h5' fontWeight="bold" style={{ marginRight: 10 }}>
-                    {i.classes.class_code}
-                  </Typography>
-                  <Typography variant='h5' >
-                    {i.classes.name}
-                  </Typography>
-                </div>
-              </Link>
-            );
-          })}
-        </CardContent>
+                    <Typography variant='h5' fontWeight="bold" style={{ marginRight: 10 }}>
+                      {i.classes.class_code}
+                    </Typography>
+                    <Typography variant='h5' >
+                      {i.classes.name}
+                    </Typography>
+                  </div>
+                </Link>
+              );
+            })}
+          </CardContent>
 
-        <CardActions>
+          <CardActions>
 
-        </CardActions>
-      </Card>
+          </CardActions>
+        </Card>
+      }
     </Container>
   )
 }

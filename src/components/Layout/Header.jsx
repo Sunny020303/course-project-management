@@ -49,9 +49,11 @@ export default function Header() {
             alt="Logo UIT"
             style={{ height: "40px", marginRight: "1rem" }}
           />
-          <Typography variant="h6" component="div" color="primary">
-            Hệ thống Quản Lý Đề Tài
-          </Typography>
+         
+            <Typography variant="h6" component="div" color="primary" onClick={()=> navigate('/classes')}>
+              Hệ thống Quản Lý Đề Tài
+            </Typography>
+          
         </div>
         {user && (
           <div style={{ display: "flex", alignItems: "center" }}>
