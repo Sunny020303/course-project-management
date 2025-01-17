@@ -1,6 +1,46 @@
 import supabase from "./supabaseClient";
 import { createNotification } from "./notificationService";
 
+export const getAllTopics = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("topics")
+      .select(`*, lecturer: lecturer_id(full_name, lecturer_code), classes(*)`);
+
+    if (error) {
+      throw error;
+    }
+
+    const { data: studentGroups, error: studentGroupsError } = await supabase
+      .from("student_groups")
+      .select(`*, student_group_members(*, users: student_id(*))`);
+
+    if (studentGroupsError) throw studentGroupsError;
+
+    const studentGroupsByTopicId = studentGroups.reduce((map, group) => {
+      map[group.topic_id] = group;
+      return map;
+    }, {});
+
+    const topicsWithGroupInfo = data.map((topic) => {
+      const registeredGroup = studentGroupsByTopicId[topic.id] || null;
+      const members = registeredGroup?.student_group_members || [];
+
+      return {
+        ...topic,
+        student_group_members: members,
+        registered_group: registeredGroup,
+        student_ids: members.map((member) => member.student_id),
+      };
+    });
+
+    return { data: topicsWithGroupInfo, error: null };
+  } catch (error) {
+    console.error("Error fetching topics:", error);
+    return { data: null, error: error.message };
+  }
+};
+
 export const getTopics = async (classId, user) => {
   try {
     const { data, error } = await supabase

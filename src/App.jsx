@@ -27,6 +27,7 @@ const GroupManagement = lazy(() =>
 const TopicDetails = lazy(() => import("./components/Topics/TopicDetails"));
 const AddTopic = lazy(() => import("./components/Topics/AddTopic"));
 const EditTopic = lazy(() => import("./components/Topics/EditTopic"));
+const TopicList = lazy(() => import("./components/Topics/TopicList"));
 const Dashboard = lazy(() => import("./pages/task1/dashboard"));
 const CreateTopic = lazy(() => import("./pages/task1/CreateTopic"));
 const CreateClass = lazy(() => import("./components/Classes/ClassCreate"));
@@ -130,6 +131,7 @@ function App() {
                           path="/classes/:classId/topics/:topicId/edit"
                           element={<EditTopic />}
                         />
+                        <Route path="/topics" element={<TopicList />} />
                         <Route
                           path="/createclass/:id"
                           element={<CreateClass />}

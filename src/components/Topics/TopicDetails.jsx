@@ -366,6 +366,11 @@ function TopicDetails() {
     }
   };
 
+  if (!user) {
+    navigate("/login", { replace: true });
+    return null;
+  }
+
   if (loading) {
     return (
       <Box

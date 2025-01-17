@@ -79,6 +79,11 @@ function EditTopic() {
     }
   };
 
+  if (!user) {
+    navigate("/login", { replace: true });
+    return null;
+  }
+
   if (loading) {
     return <Container maxWidth="md">Đang tải...</Container>;
   }
@@ -96,9 +101,8 @@ function EditTopic() {
   }
 
   if (
-    user &&
-    ((user.role === "lecturer" && topic.class.lecturer_id !== user.id) ||
-      (user.role === "admin" && topic.class.is_final_project))
+    (user.role === "lecturer" && topic.class.lecturer_id !== user.id) ||
+    (user.role === "admin" && topic.class.is_final_project)
   ) {
     return (
       <Alert severity="error">

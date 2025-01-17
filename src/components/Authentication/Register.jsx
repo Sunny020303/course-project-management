@@ -188,7 +188,7 @@ function Register() {
             </Typography>
           )}
         </form>
-        
+
       </Box>
     </Container>
   );
