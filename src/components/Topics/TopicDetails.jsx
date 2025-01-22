@@ -100,6 +100,10 @@ function TopicDetails() {
     fetchUserGroup();
   }, [fetchUserGroup]);
 
+  useEffect(() => {
+    if (!user) navigate("/login", { replace: true });
+  }, [navigate, user]);
+
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
   };
@@ -366,11 +370,6 @@ function TopicDetails() {
     }
   };
 
-  if (!user) {
-    navigate("/login", { replace: true });
-    return null;
-  }
-
   if (loading) {
     return (
       <Box
@@ -401,7 +400,7 @@ function TopicDetails() {
   if (
     user &&
     ((user.role === "lecturer" && topic.class.lecturer_id !== user.id) ||
-      (user.role === "admin" && topic.class.is_final_project))
+      (user.role === "admin" && !topic.class.is_final_project))
   ) {
     return (
       <Alert severity="error">

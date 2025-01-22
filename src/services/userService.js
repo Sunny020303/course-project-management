@@ -43,7 +43,6 @@ export const getAccountList = async () => {
       .select("*, departments!department_id(name)");
     if (error) throw error;
 
-
     return { data: data, error: null };
   } catch (error) {
     console.error("Error getting all account", error);
@@ -90,7 +89,6 @@ export const getAccount = async (id) => {
       .eq("id", id)
     if (error) throw error;
 
-
     return { data: data, error: null };
   } catch (error) {
     console.error("Error getting user account information", error);
@@ -105,7 +103,6 @@ export const getClassUser = async (id) => {
       .select("*, classes(*)")
       .eq("student_id", id)
     if (error) throw error;
-
 
     return { data: data, error: null };
   } catch (error) {
@@ -140,7 +137,7 @@ export const updateUser = async (id, email, role, name, idDepartment, idLecturer
     console.error("Error update info user data: ", e);
     return {
       data: null,
-      error: `Không thể update user: ${e.message}`
+      error: `Không thể update user: ${e.message}`,
     };
   }
 };

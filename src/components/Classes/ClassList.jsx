@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link as RouterLink } from "react-router-dom";
 import { getClassesByUser } from "../../services/classService";
 import { useAuth } from "../../context/AuthContext";
 import {
@@ -108,15 +108,26 @@ function ClassList() {
 
   return (
     <Container maxWidth="md" sx={{ flexGrow: 1, marginTop: 2 }}>
-      <Box sx={{ display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
-        <Typography variant="h5" >
-          Danh sách lớp học
-        </Typography>
-        {isAdmin && <Button variant="outlined" onClick={() => {
-          navigate("/createclass/new")
-        }}>
-          <Add sx={{ marginRight: 1 }} /> Thêm lớp học mới
-        </Button>}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 2,
+        }}
+      >
+        <Typography variant="h5">Danh sách lớp học</Typography>
+        {isAdmin && (
+          <Button
+            variant="outlined"
+            onClick={() => {
+              navigate("/createclass/new");
+            }}
+          >
+            <Add sx={{ marginRight: 1 }} /> Thêm lớp học mới
+          </Button>
+        )}
       </Box>
 
       <TextField
@@ -169,6 +180,16 @@ function ClassList() {
           />
         </Box>
       )}
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+        <Button
+          variant="contained"
+          color="secondary"
+          component={RouterLink}
+          to="/topics"
+        >
+          Xem tất cả đề tài
+        </Button>
+      </Box>
     </Container>
   );
 }

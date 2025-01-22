@@ -46,6 +46,8 @@ export const getClassesByUser = async (user) => {
       query = query.in("id", classIds);
     } else if (user?.role === "lecturer") {
       query = query.eq("lecturer_id", user.id);
+    } else if (user?.role === "admin") {
+      query = query.eq("is_final_project", true);
     }
 
     const { data, error } = await query;

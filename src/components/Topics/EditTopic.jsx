@@ -28,6 +28,10 @@ function EditTopic() {
   const [success, setSuccess] = useState(null);
 
   useEffect(() => {
+    if (!user) navigate("/login", { replace: true });
+  }, [navigate, user]);
+
+  useEffect(() => {
     const fetchTopic = async () => {
       setLoading(true);
       try {
@@ -79,11 +83,6 @@ function EditTopic() {
     }
   };
 
-  if (!user) {
-    navigate("/login", { replace: true });
-    return null;
-  }
-
   if (loading) {
     return <Container maxWidth="md">Đang tải...</Container>;
   }
@@ -102,7 +101,7 @@ function EditTopic() {
 
   if (
     (user.role === "lecturer" && topic.class.lecturer_id !== user.id) ||
-    (user.role === "admin" && topic.class.is_final_project)
+    (user.role === "admin" && !topic.class.is_final_project)
   ) {
     return (
       <Alert severity="error">

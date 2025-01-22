@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   TextField,
   Button,
@@ -37,6 +37,10 @@ function AddTopic() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!user) navigate("/login", { replace: true });
+  }, [navigate, user]);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -109,11 +113,6 @@ function AddTopic() {
       setLoading(false);
     }
   };
-
-  if (!user) {
-    navigate("/login", { replace: true });
-    return null;
-  }
 
   return (
     <Container maxWidth="md">

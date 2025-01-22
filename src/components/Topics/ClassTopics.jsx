@@ -512,7 +512,7 @@ function ClassTopics() {
   if (
     user &&
     ((user.role === "lecturer" && currentClass.lecturer_id !== user.id) ||
-      (user.role === "admin" && currentClass.is_final_project))
+      (user.role === "admin" && !currentClass.is_final_project))
   ) {
     return (
       <Alert severity="error">

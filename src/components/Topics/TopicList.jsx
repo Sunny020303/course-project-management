@@ -99,6 +99,10 @@ function TopicList() {
     fetchTopics();
   }, [fetchTopics]);
 
+  useEffect(() => {
+    if (!user) navigate("/login", { replace: true });
+  }, [navigate, user]);
+
   const handleSearchChange = useCallback((event) => {
     setSearchQuery(event.target.value);
     setPage(0);
@@ -298,11 +302,6 @@ function TopicList() {
   const emptyRows =
     rowsPerPage -
     Math.min(rowsPerPage, filteredTopics.length - page * rowsPerPage);
-
-  if (!user) {
-    navigate("/login", { replace: true });
-    return null;
-  }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -582,6 +581,16 @@ function TopicList() {
           />
         </>
       )}
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 2, mb: 2 }}>
+        <Button
+          variant="contained"
+          color="secondary"
+          component={RouterLink}
+          to="/classes"
+        >
+          Xem danh sách lớp học
+        </Button>
+      </Box>
     </Container>
   );
 }
