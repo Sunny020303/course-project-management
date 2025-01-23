@@ -19,6 +19,17 @@ export const getAllClassesDetails = async () => {
         "*, subjects(name, subject_code), lecturer: lecturer_id(full_name)"
       );
     if (error) throw error;
+    // Fetch lecturers for final project classes
+    for (const classItem of data) {
+      if (classItem.is_final_project) {
+        const { data: lecturers, error: lecturerError } = await supabase
+          .from("class_lecturers")
+          .select(`*, lecturer: lecturer_id(full_name)`)
+          .eq("class_id", classItem.id);
+        if (lecturerError) throw lecturerError;
+        classItem.lecturers = lecturers;
+      }
+    }
     return { data, error: null };
   } catch (error) {
     console.error("Error fetching all classes details:", error);
