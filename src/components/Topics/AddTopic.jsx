@@ -14,6 +14,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { createTopic } from "../../services/topicService";
+import { getClassLecturers } from "../../services/classService";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate, useParams } from "react-router-dom";
 import moment from "moment";
@@ -22,8 +23,10 @@ function AddTopic() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { classId } = useParams();
+  const [classLecturers, setClassLecturers] = useState(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [lecturer, setLecturer] = useState("");
   const [maxMembers, setMaxMembers] = useState(1);
   const [registrationDeadline, setRegistrationDeadline] = useState(
     moment().format("YYYY-MM-DDTHH:mm")
@@ -42,6 +45,24 @@ function AddTopic() {
     if (!user) navigate("/login", { replace: true });
   }, [navigate, user]);
 
+  useEffect(() => {
+    const fetchClassLecturers = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await getClassLecturers(classId);
+        if (error) throw error;
+        console.log(data);
+        setClassLecturers(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClassLecturers();
+  }, [classId]);
+
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     switch (name) {
@@ -50,6 +71,9 @@ function AddTopic() {
         break;
       case "description":
         setDescription(value);
+        break;
+      case "lecturer":
+        setLecturer(value);
         break;
       case "max_members":
         setMaxMembers(parseInt(value, 10));
@@ -89,7 +113,7 @@ function AddTopic() {
     try {
       const { error: createError } = await createTopic({
         class_id: classId,
-        lecturer_id: user.id,
+        lecturer_id: lecturer ?? user.id,
         name,
         description,
         max_members: maxMembers,
@@ -156,6 +180,30 @@ function AddTopic() {
                 rows={4}
                 variant="outlined"
               />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel id="lecturer-label">
+                  Giảng viên hướng dẫn
+                </InputLabel>
+                <Select
+                  labelId="lecturer-label"
+                  label="Giảng viên hướng dẫn"
+                  name="lecturer"
+                  value={lecturer}
+                  onChange={handleInputChange}
+                >
+                  {classLecturers &&
+                    classLecturers.map((classLecturer) => (
+                      <MenuItem
+                        key={classLecturer.lecturer_id}
+                        value={classLecturer.lecturer_id}
+                      >
+                        {classLecturer.lecturer.full_name}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField

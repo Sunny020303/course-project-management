@@ -399,12 +399,12 @@ function TopicDetails() {
 
   if (
     user &&
-    ((user.role === "lecturer" && topic.class.lecturer_id !== user.id) ||
+    ((user.role === "lecturer" && topic.lecturer_id !== user.id) ||
       (user.role === "admin" && !topic.class.is_final_project))
   ) {
     return (
       <Alert severity="error">
-        Bạn không phải là giảng viên của lớp học này.
+        Bạn không phải là giảng viên của đề tài này.
       </Alert>
     );
   }

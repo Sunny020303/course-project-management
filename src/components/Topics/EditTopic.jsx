@@ -14,6 +14,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { updateTopic, getTopic } from "../../services/topicService";
+import { getClassLecturers } from "../../services/classService";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate, useParams } from "react-router-dom";
 import moment from "moment";
@@ -22,6 +23,7 @@ function EditTopic() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { classId, topicId } = useParams();
+  const [classLecturers, setClassLecturers] = useState(null);
   const [topic, setTopic] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -47,6 +49,24 @@ function EditTopic() {
 
     fetchTopic();
   }, [topicId]);
+
+  useEffect(() => {
+    const fetchClassLecturers = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await getClassLecturers(classId);
+        if (error) throw error;
+        console.log(data);
+        setClassLecturers(data);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClassLecturers();
+  }, [classId]);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
@@ -100,12 +120,12 @@ function EditTopic() {
   }
 
   if (
-    (user.role === "lecturer" && topic.class.lecturer_id !== user.id) ||
+    (user.role === "lecturer" && topic.lecturer_id !== user.id) ||
     (user.role === "admin" && !topic.class.is_final_project)
   ) {
     return (
       <Alert severity="error">
-        Bạn không phải là giảng viên của lớp học này.
+        Bạn không phải là giảng viên của đề tài này.
       </Alert>
     );
   }
@@ -152,6 +172,30 @@ function EditTopic() {
                 rows={4}
                 variant="outlined"
               />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth variant="outlined">
+                <InputLabel id="lecturer-label">
+                  Giảng viên hướng dẫn
+                </InputLabel>
+                <Select
+                  labelId="lecturer-label"
+                  label="Giảng viên hướng dẫn"
+                  name="lecturer_id"
+                  value={topic.lecturer_id}
+                  onChange={handleInputChange}
+                >
+                  {classLecturers &&
+                    classLecturers.map((classLecturer) => (
+                      <MenuItem
+                        key={classLecturer.lecturer_id}
+                        value={classLecturer.lecturer_id}
+                      >
+                        {classLecturer.lecturer.full_name}
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField

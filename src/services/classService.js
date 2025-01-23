@@ -305,3 +305,17 @@ export const BulkDeleteClassByIds = async (ids) => {
     console.error("Error delete multi class: ", error);
   }
 };
+
+export const getClassLecturers = async (classId) => {
+  try {
+    const { data, error } = await supabase
+      .from("class_lecturers")
+      .select(`*, lecturer: lecturer_id(full_name)`)
+      .eq("class_id", classId);
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error("Error fetching class lecturers:", error);
+    return { data: null, error: error.message };
+  }
+};

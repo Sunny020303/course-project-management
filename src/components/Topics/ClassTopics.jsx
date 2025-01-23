@@ -564,16 +564,17 @@ function ClassTopics() {
             </Tooltip>
           )}
         </Box>
-        {user?.role === "lecturer" && (
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<AddIcon />}
-            onClick={() => navigate(`/classes/${classId}/topics/create`)}
-          >
-            Thêm đề tài
-          </Button>
-        )}
+        {user?.role === "lecturer" ||
+          (user?.role === "admin" && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={() => navigate(`/classes/${classId}/topics/create`)}
+            >
+              Thêm đề tài
+            </Button>
+          ))}
       </Box>
       {user?.role === "student" && !userGroup && (
         <Alert
