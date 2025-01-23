@@ -426,7 +426,17 @@ export const updateTopic = async (topicData) => {
   try {
     const { data, error } = await supabase
       .from("topics")
-      .update(topicData)
+      .update({
+        name: topicData.name,
+        description: topicData.description,
+        lecturer_id: topicData.lecturer_id,
+        class_id: topicData.class_id,
+        approval_status: topicData.approval_status,
+        max_members: topicData.max_members,
+        registration_deadline: topicData.registration_deadline,
+        report_submission_deadline: topicData.report_submission_deadline,
+        approval_deadline: topicData.approval_deadline,
+      })
       .eq("id", topicData.id)
       .select()
       .single();
