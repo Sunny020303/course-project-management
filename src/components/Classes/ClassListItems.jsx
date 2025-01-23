@@ -155,12 +155,20 @@ function ClassListItems({
                               Mã lớp: {c.class_code}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              Giảng viên: {c.lecturer?.full_name}
+                              {c.is_final_project
+                                ? c.lecturers?.map((lecturer, index) => (
+                                    <React.Fragment key={index}>
+                                      {`Giảng viên: ` +
+                                        lecturer.lecturer.full_name}
+                                      {index < c.lecturers.length - 1 && <br />}
+                                    </React.Fragment>
+                                  ))
+                                : `Giảng viên: ` + c.lecturer?.full_name}
                             </Typography>
                           </>
                         }
                       />
-                      {user.role === "admin" && c.is_final_project && (
+                      {user?.role === "admin" && c.is_final_project && (
                         <IconButton
                           edge="end"
                           aria-label="View details"

@@ -13,7 +13,11 @@ export const getClasses = async () => {
 
 export const getAllClassesDetails = async () => {
   try {
-    const { data, error } = await supabase.from("classes").select("*, subjects(name, subject_code), lecturer: lecturer_id(full_name)");
+    const { data, error } = await supabase
+      .from("classes")
+      .select(
+        "*, subjects(name, subject_code), lecturer: lecturer_id(full_name)"
+      );
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
@@ -46,12 +50,23 @@ export const getClassesByUser = async (user) => {
       query = query.in("id", classIds);
     } else if (user?.role === "lecturer") {
       query = query.eq("lecturer_id", user.id);
-    } else if (user?.role === "admin") {
-      query = query.eq("is_final_project", true);
     }
 
     const { data, error } = await query;
     if (error) throw error;
+
+    // Fetch lecturers for final project classes
+    for (const classItem of data) {
+      if (classItem.is_final_project) {
+        const { data: lecturers, error: lecturerError } = await supabase
+          .from("class_lecturers")
+          .select(`*, lecturer: lecturer_id(full_name)`)
+          .eq("class_id", classItem.id);
+        if (lecturerError) throw lecturerError;
+        classItem.lecturers = lecturers;
+      }
+    }
+
     return { data, error: null };
   } catch (error) {
     console.error("Error fetching classes by user:", error);
@@ -94,54 +109,130 @@ export const CreateUpdateClass = async (
   lecturerId,
   semester,
   year,
-  isFinalProject,
+  isFinalProject
 ) => {
   try {
     if (id === "new") {
-      const { data, error } = await supabase
-        .from("classes")
-        .insert([
-          {
-            class_code: classCode,
-            name: name,
-            subject_id: subjectId,
-            lecturer_id: lecturerId,
-            semester: year + semester,
-            is_final_project: isFinalProject,
-          },
-        ])
-        .select();
-      if (error) {
-        console.log(error);
-        throw error;
+      if (isFinalProject) {
+        const { data, error } = await supabase
+          .from("classes")
+          .insert([
+            {
+              class_code: classCode,
+              name: name,
+              subject_id: subjectId,
+              semester: year + semester,
+              is_final_project: isFinalProject,
+            },
+          ])
+          .select()
+          .single();
+        for (const id of lecturerId) {
+          const { error: lecturerError } = await supabase
+            .from("class_lecturers")
+            .insert([{ class_id: data.id, lecturer_id: id }]);
+          if (lecturerError) {
+            console.log(lecturerError);
+            throw lecturerError;
+          }
+        }
+        if (error) {
+          console.log(error);
+          throw error;
+        }
+        if (data) {
+          console.log(data);
+        }
+        return { data: data, error: error };
+      } else {
+        const { data, error } = await supabase
+          .from("classes")
+          .insert([
+            {
+              class_code: classCode,
+              name: name,
+              subject_id: subjectId,
+              lecturer_id: lecturerId,
+              semester: year + semester,
+              is_final_project: isFinalProject,
+            },
+          ])
+          .select();
+        if (error) {
+          console.log(error);
+          throw error;
+        }
+        if (data) {
+          console.log(data);
+        }
+        return { data: data, error: error };
       }
-      if (data) {
-        console.log(data);
-      }
-      return { data: data, error: error };
     } else {
-      const { data, error } = await supabase
-        .from("classes")
-        .upsert([
-          {
-            id: id,
-            class_code: classCode,
-            name: name,
-            subject_id: subjectId,
-            lecturer_id: lecturerId,
-            semester: year + semester,
-            is_final_project: isFinalProject,
-          },
-        ])
-        .select();
-      if (error) {
-        console.log(error);
-        throw error;
+      if (isFinalProject) {
+        const { data, error } = await supabase
+          .from("classes")
+          .upsert([
+            {
+              id: id,
+              class_code: classCode,
+              name: name,
+              subject_id: subjectId,
+              semester: year + semester,
+              is_final_project: isFinalProject,
+            },
+          ])
+          .select()
+          .single();
+        const { error: deleteError } = await supabase
+          .from("class_lecturers")
+          .delete()
+          .eq("class_id", id);
+        if (deleteError) {
+          console.log(deleteError);
+          throw deleteError;
+        }
+
+        for (const id of lecturerId) {
+          const { error: lecturerError } = await supabase
+            .from("class_lecturer")
+            .insert([{ class_id: data.id, lecturer_id: id }]);
+          if (lecturerError) {
+            console.log(lecturerError);
+            throw lecturerError;
+          }
+        }
+        if (error) {
+          console.log(error);
+          throw error;
+        }
+        if (data) {
+          console.log(data);
+        }
+        return { data: data, error: error };
+      } else {
+        const { data, error } = await supabase
+          .from("classes")
+          .upsert([
+            {
+              id: id,
+              class_code: classCode,
+              name: name,
+              subject_id: subjectId,
+              lecturer_id: lecturerId,
+              semester: year + semester,
+              is_final_project: isFinalProject,
+            },
+          ])
+          .select();
+        if (error) {
+          console.log(error);
+          throw error;
+        }
+        if (data) {
+          console.log(data);
+        }
+        return { data: data, error: error };
       }
-      if (data) {
-        console.log(data);
-      }
-      return { data: data, error: error };
     }
   } catch (error) {
     console.error("Error create/update new class: ", error);
@@ -157,7 +248,9 @@ export const bulkCreateClass = async (classes) => {
     const { data, error } = await supabase
       .from("classes")
       .insert(classes)
-      .select("*, subjects(name, subject_code), lecturer: lecturer_id(full_name)");
+      .select(
+        "*, subjects(name, subject_code), lecturer: lecturer_id(full_name)"
+      );
     if (error) {
       console.log(error);
       throw error;
@@ -168,14 +261,11 @@ export const bulkCreateClass = async (classes) => {
   } catch (e) {
     console.error("Error create/update new class: ", e);
   }
-}
+};
 
 export const DeleteClassById = async (id) => {
   try {
-    const { error } = await supabase
-      .from('classes')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from("classes").delete().eq("id", id);
     if (error) {
       console.log(error);
       throw error;
@@ -183,14 +273,11 @@ export const DeleteClassById = async (id) => {
   } catch (error) {
     console.error("Error delete class: ", error);
   }
-}
+};
 
 export const BulkDeleteClassByIds = async (ids) => {
   try {
-    const { error } = await supabase
-      .from('classes')
-      .delete()
-      .in('id', ids);
+    const { error } = await supabase.from("classes").delete().in("id", ids);
     if (error) {
       console.log(error);
       throw error;
@@ -198,4 +285,4 @@ export const BulkDeleteClassByIds = async (ids) => {
   } catch (error) {
     console.error("Error delete multi class: ", error);
   }
-}
+};

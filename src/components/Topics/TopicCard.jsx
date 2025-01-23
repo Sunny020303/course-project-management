@@ -334,7 +334,8 @@ const TopicCard = React.memo(function TopicCard({
               : "flex-end",
         }}
       >
-        {(user?.role === "lecturer" || user?.role === "admin") && (
+        {((user?.role === "lecturer" && user.id === topic.lecturer_id) ||
+          user?.role === "admin") && (
           <>
             <Tooltip title="Chỉnh sửa">
               <IconButton
