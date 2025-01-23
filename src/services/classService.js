@@ -97,6 +97,14 @@ export const getClassDetails = async (classId) => {
       )
       .eq("id", classId)
       .single();
+    if (data.is_final_project) {
+      const { data: lecturers, error: lecturerError } = await supabase
+        .from("class_lecturers")
+        .select(`*, lecturer: lecturer_id(full_name)`)
+        .eq("class_id", data.id);
+      if (lecturerError) throw lecturerError;
+      data.lecturers = lecturers;
+    }
 
     if (error) {
       throw error;

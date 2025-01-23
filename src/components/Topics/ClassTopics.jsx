@@ -511,7 +511,13 @@ function ClassTopics() {
 
   if (
     user &&
-    ((user.role === "lecturer" && currentClass.lecturer_id !== user.id) ||
+    ((user.role === "lecturer" &&
+      ((currentClass.is_final_project &&
+        !currentClass.lecturers.some(
+          (lecturer) => lecturer.lecturer_id === user.id
+        )) ||
+        (!currentClass.is_final_project &&
+          currentClass.lecturer_id !== user.id))) ||
       (user.role === "admin" && !currentClass.is_final_project))
   ) {
     return (
