@@ -22,7 +22,7 @@ import * as XLSX from 'xlsx';
 export default function AdminAccountManagement() {
     const navigate = useNavigate();
     const [excelData, setExcelData] = useState([]);
-    const [upload, setUpload]=useState("none");
+    const [upload, setUpload] = useState("none");
     const [classList, setClassList] = useState([]);
     const [newClassList, setNewClassList] = useState(false);
 
@@ -36,7 +36,7 @@ export default function AdminAccountManagement() {
             const listOfClass = getAllClassesDetails();
             listOfClass.then((data) => {
                 setClassList(data.data);
-                //console.log(data.data);
+                console.log(data.data);
             })
         } catch (e) {
             throw (e);
@@ -62,7 +62,7 @@ export default function AdminAccountManagement() {
         });
     }, [])
 
-    
+
 
     const handleUploadFile = () => {
         setUpload('uploading');
@@ -77,7 +77,7 @@ export default function AdminAccountManagement() {
         }
     }
 
-    
+
 
     const handleFileImport = (e) => {
         try {
@@ -115,19 +115,37 @@ export default function AdminAccountManagement() {
     };
 
     function exportToExcel(data, filename = 'data.xlsx') {
+        let count=1;
+        const formattedData = data.map(item => ({
+            "STT": count++,
+            "Mã lớp": item.class_code,
+            "Tên": item.name,
+            "Mã môn học": item.subjects?.subject_code,
+            "Tên môn học": item.subjects?.name,
+            //"Mã Giảng viên": item.lecturer?.lecturer_code,
+            "Tên Giảng viên": item.lecturer?.full_name,
+            "Học kỳ": (item.semester - Math.floor(item.semester / 10)*10),
+            "Năm": Math.floor(item.semester / 10),
+            "Môn đồ án": item===true ? "Yes" : "No", 
+        }));
+
         // Tạo một worksheet
-        const ws = XLSX.utils.json_to_sheet(data);
-    
+        const ws = XLSX.utils.json_to_sheet(formattedData);
+
+        /*const header = Object.keys(formattedData[0]); // Lấy danh sách header
+        header.forEach((key, index) => {
+            ws[XLSX.utils.encode_col(index) + '1'].s = { font: { bold: true } }; // '1' là dòng header
+        });*/
         // Tạo một workbook
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Sheet1'); // 'Sheet1' là tên của sheet
-    
+
         // Xuất file
         XLSX.writeFile(wb, filename);
     }
 
     const handleFileExport = () => {
-        exportToExcel(classList, 'ClassList.xlsx');    
+        exportToExcel(classList, 'ClassList.xlsx');
     };
     const columns = [
         { field: 'class_code', headerName: 'Mã lớp', width: 150 },
@@ -157,7 +175,7 @@ export default function AdminAccountManagement() {
             width: 180,
             editable: false,
             valueGetter: (params) => {
-                return 'Năm học '+(Math.floor(params/10))+", học kỳ "+((params-(Math.floor(params/10))*10));
+                return 'Năm học ' + (Math.floor(params / 10)) + ", học kỳ " + ((params - (Math.floor(params / 10)) * 10));
             }
         },
         {
@@ -168,7 +186,7 @@ export default function AdminAccountManagement() {
                 const handleDeleteClick = (id) => {
                     //console.log(`Delete row with id: ${id}`);
                     DeleteClassById(id);
-                    setClassList(classList.filter((i)=>i.id!==id));
+                    setClassList(classList.filter((i) => i.id !== id));
                 };
                 const handleEditClick = (id) => {
                     //console.log(`Edit row with id: ${id}`);
@@ -221,8 +239,8 @@ export default function AdminAccountManagement() {
                 >
                     <input type="file" accept=".xlsx, .xls" onChange={handleFileImport} />
                 </Button>
-                {excelData.length !== 0 && <Button color={upload==='success'? 'success' : "primary"} variant="outlined" onClick={handleUploadFile} startIcon={upload==='success'? <CheckIcon/> :<CloudUploadIcon />} sx={{ marginRight: 1 }}>
-                    {upload==='none' ? "Upload file" : upload==='uploading' ? "Uploading" : "Success"}
+                {excelData.length !== 0 && <Button color={upload === 'success' ? 'success' : "primary"} variant="outlined" onClick={handleUploadFile} startIcon={upload === 'success' ? <CheckIcon /> : <CloudUploadIcon />} sx={{ marginRight: 1 }}>
+                    {upload === 'none' ? "Upload file" : upload === 'uploading' ? "Uploading" : "Success"}
                 </Button>}
                 <Button variant="outlined" onClick={handleFileExport} sx={{ marginRight: 1 }}>
                     <FileDownloadIcon sx={{ marginRight: 1 }} /> Export file

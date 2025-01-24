@@ -36,8 +36,16 @@ export default function AdminAccountManagement() {
   }, [])
 
   function exportToExcel(data, filename = 'data.xlsx') {
+    let count = 1;
+    const formattedData = data.map(item => ({
+      "STT": count++,
+      "Mã số": item.student_code? item.student_code : item.lecturer_code,
+      "Email": item.email,
+      "Khoa": item.departments?.name,
+      "Phân loại": item.role,
+    }));
     // Tạo một worksheet
-    const ws = XLSX.utils.json_to_sheet(data);
+    const ws = XLSX.utils.json_to_sheet(formattedData);
 
     // Tạo một workbook
     const wb = XLSX.utils.book_new();

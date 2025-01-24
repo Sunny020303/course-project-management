@@ -261,25 +261,6 @@ function ClassCreate() {
           {loading ? "Đang đăng ký" : "Đăng ký"}
         </Button>
 
-        <Button
-          variant="contained"
-          color="primary"
-          fullWidth
-          sx={{ marginTop: 10 }}
-          onClick={() => {
-            console.log({
-              id,
-              classCode,
-              name,
-              idSubject,
-              idLecturer,
-              semester,
-              year,
-            });
-          }}
-        >
-          Test
-        </Button>
       </form>
     </Container>
   );

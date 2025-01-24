@@ -93,7 +93,7 @@ export const getClassDetails = async (classId) => {
     const { data, error } = await supabase
       .from("classes")
       .select(
-        `*, subjects(name, subject_code, department_id), lecturer: lecturer_id(full_name)`
+        `*, subjects(name, subject_code, department_id), lecturer: lecturer_id(full_name, lecturer_code)`
       )
       .eq("id", classId)
       .single();
