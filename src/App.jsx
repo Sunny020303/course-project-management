@@ -31,6 +31,7 @@ const TopicList = lazy(() => import("./components/Topics/TopicList"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const CreateTopic = lazy(() => import("./pages/task1/CreateTopic"));
 const CreateClass = lazy(() => import("./components/Classes/ClassCreate"));
+const ClassMembers = lazy(() => import("./components/Classes/ClassMembers"));
 const Account = lazy(() => import("./components/AccountManagement/Account"));
 const AccountUpdate = lazy(() =>
   import("./components/AccountManagement/AccountUpdate")
@@ -139,6 +140,10 @@ function App() {
                         <Route
                           path="/classes/:id/edit"
                           element={<CreateClass />}
+                        />
+                        <Route
+                          path="/classes/:classId/members"
+                          element={<ClassMembers />}
                         />
                         <Route path="/account/:id" element={<Account />} />
                         <Route

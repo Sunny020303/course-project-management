@@ -53,6 +53,8 @@ import {
   ListItemAvatar,
   ListItemSecondaryAction,
   Badge,
+  Tabs,
+  Tab,
 } from "@mui/material";
 import { Container } from "@mui/system";
 import {
@@ -107,6 +109,7 @@ function ClassTopics() {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [fetchTopicsError, setFetchTopicsError] = useState(null);
   const [topicsLoading, setTopicsLoading] = useState(false);
+  const [value, setValue] = React.useState(0);
 
   const open = Boolean(anchorEl);
 
@@ -276,6 +279,10 @@ function ClassTopics() {
       setProcessingSwap(false);
       handleCloseSwapRequestsDialog();
     }
+  };
+
+  const handleChange = (event, newValue) => {
+    setValue(newValue);
   };
 
   useEffect(() => {
@@ -563,18 +570,28 @@ function ClassTopics() {
               </IconButton>
             </Tooltip>
           )}
+          {(user?.role === "lecturer" || user?.role === "admin") && (
+            <>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => navigate(`/classes/${classId}/members`)}
+                sx={{ marginRight: 2, whiteSpace: "nowrap" }}
+              >
+                Xem danh sách sinh viên
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                onClick={() => navigate(`/classes/${classId}/topics/create`)}
+                sx={{ whiteSpace: "nowrap" }}
+              >
+                Thêm đề tài
+              </Button>
+            </>
+          )}
         </Box>
-        {user?.role === "lecturer" ||
-          (user?.role === "admin" && (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<AddIcon />}
-              onClick={() => navigate(`/classes/${classId}/topics/create`)}
-            >
-              Thêm đề tài
-            </Button>
-          ))}
       </Box>
       {user?.role === "student" && !userGroup && (
         <Alert
@@ -769,7 +786,10 @@ function ClassTopics() {
                 return (
                   <ListItem
                     key={request.id}
-                    sx={{ flexDirection: "column", alignItems: "flex-start" }}
+                    sx={{
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                    }}
                   >
                     <Box sx={{ width: "100%", mb: 2 }}>
                       <Typography

@@ -319,3 +319,60 @@ export const getClassLecturers = async (classId) => {
     return { data: null, error: error.message };
   }
 };
+
+export const getClassMembers = async (classId) => {
+  try {
+    const { data: enrollments, error: enrollmentsError } = await supabase
+      .from("student_class_enrollment")
+      .select("student_id")
+      .eq("class_id", classId);
+
+    if (enrollmentsError) throw enrollmentsError;
+
+    const studentIds = enrollments.map((e) => e.student_id);
+
+    const { data: usersData, error: usersError } = await supabase
+      .from("users")
+      .select("*")
+      .in("id", studentIds);
+
+    if (usersError) throw usersError;
+
+    const { data: studentsData, error: studentsError } = await supabase
+      .from("student_group_members")
+      .select(
+        `
+        *,
+        student_groups!inner(
+          *,
+          topics!left(
+            *,
+            lecturer: lecturer_id!left(full_name)
+          ),
+          topic_results!left(score, notes, report_url)
+        )
+        `
+      )
+      .eq("student_groups.class_id", classId)
+      .in("student_id", studentIds);
+
+    if (studentsError) throw studentsError;
+
+    const members = usersData.map((user) => {
+      const studentGroup = studentsData.find(
+        (student) => student.student_id === user.id
+      );
+      return {
+        student_group_id: studentGroup?.student_group_id,
+        users: user,
+        student_groups: studentGroup ? studentGroup.student_groups : null,
+        topic_results: studentGroup?.topic_results || null,
+      };
+    });
+
+    return { data: members, error: null };
+  } catch (error) {
+    console.error("Error fetching class members:", error);
+    return { data: null, error: error.message };
+  }
+};
