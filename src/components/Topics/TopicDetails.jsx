@@ -433,7 +433,9 @@ function TopicDetails() {
                       <IconButton
                         color="error"
                         size="small"
-                        onClick={handleDeleteTopic}
+                        onClick={() => {
+                          handleDeleteTopic(topic.id);
+                        }}
                         disabled={deleting}
                       >
                         {deleting ? (

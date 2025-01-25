@@ -393,7 +393,7 @@ const TopicCard = React.memo(function TopicCard({
                     )}
                   </MenuItem>
                   <MenuItem
-                    onClick={() => handleDeleteTopic(selectedTopic.id)}
+                    onClick={() => handfleDeleteTopic(selectedTopic.id)}
                     disabled={deletingTopic === selectedTopic.id}
                   >
                     {deletingTopic === selectedTopic.id ? (

@@ -12,6 +12,7 @@ import {
   InputLabel,
   FormControl,
   CircularProgress,
+  Snackbar,
 } from "@mui/material";
 import { createTopic } from "../../services/topicService";
 import { getClassLecturers } from "../../services/classService";
@@ -26,7 +27,7 @@ function AddTopic() {
   const [classLecturers, setClassLecturers] = useState(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [lecturer, setLecturer] = useState("");
+  const [lecturer, setLecturer] = useState(undefined);
   const [maxMembers, setMaxMembers] = useState(1);
   const [registrationDeadline, setRegistrationDeadline] = useState(
     moment().format("YYYY-MM-DDTHH:mm")
@@ -40,6 +41,9 @@ function AddTopic() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   useEffect(() => {
     if (!user) navigate("/login", { replace: true });
@@ -55,6 +59,9 @@ function AddTopic() {
         setClassLecturers(data);
       } catch (error) {
         setError(error.message);
+        setSnackbarMessage(error.message);
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
       } finally {
         setLoading(false);
       }
@@ -99,13 +106,21 @@ function AddTopic() {
     setSuccess(null);
 
     if (!name.trim()) {
-      setError("Vui lòng nhập tên đề tài.");
+      const errorMessage = "Vui lòng nhập tên đề tài.";
+      setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
       setLoading(false);
       return;
     }
 
     if (maxMembers < 1) {
-      setError("Số lượng thành viên tối đa phải ít nhất là 1.");
+      const errorMessage = "Số lượng thành viên tối đa phải ít nhất là 1.";
+      setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
       setLoading(false);
       return;
     }
@@ -124,7 +139,11 @@ function AddTopic() {
 
       if (createError) throw createError;
 
-      setSuccess("Đề tài đã được tạo thành công.");
+      const successMessage = "Đề tài đã được tạo thành công.";
+      setSuccess(successMessage);
+      setSnackbarMessage(successMessage);
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
       setName("");
       setDescription("");
       setMaxMembers(1);
@@ -133,9 +152,16 @@ function AddTopic() {
       setApprovalDeadline(moment().format("YYYY-MM-DDTHH:mm"));
     } catch (error) {
       setError(error.message);
+      setSnackbarMessage(error.message);
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
   };
 
   return (
@@ -181,30 +207,32 @@ function AddTopic() {
                 variant="outlined"
               />
             </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel id="lecturer-label">
-                  Giảng viên hướng dẫn
-                </InputLabel>
-                <Select
-                  labelId="lecturer-label"
-                  label="Giảng viên hướng dẫn"
-                  name="lecturer"
-                  value={lecturer}
-                  onChange={handleInputChange}
-                >
-                  {classLecturers &&
-                    classLecturers.map((classLecturer) => (
-                      <MenuItem
-                        key={classLecturer.lecturer_id}
-                        value={classLecturer.lecturer_id}
-                      >
-                        {classLecturer.lecturer.full_name}
-                      </MenuItem>
-                    ))}
-                </Select>
-              </FormControl>
-            </Grid>
+            {user.role === "admin" && (
+              <Grid item xs={12}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel id="lecturer-label">
+                    Giảng viên hướng dẫn
+                  </InputLabel>
+                  <Select
+                    labelId="lecturer-label"
+                    label="Giảng viên hướng dẫn"
+                    name="lecturer"
+                    value={lecturer}
+                    onChange={handleInputChange}
+                  >
+                    {classLecturers &&
+                      classLecturers.map((classLecturer) => (
+                        <MenuItem
+                          key={classLecturer.lecturer_id}
+                          value={classLecturer.lecturer_id}
+                        >
+                          {classLecturer.lecturer.full_name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -282,6 +310,13 @@ function AddTopic() {
           </Grid>
         </form>
       </Paper>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+        severity={snackbarSeverity}
+      />
     </Container>
   );
 }

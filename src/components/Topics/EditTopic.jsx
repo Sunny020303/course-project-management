@@ -12,6 +12,7 @@ import {
   InputLabel,
   FormControl,
   CircularProgress,
+  Snackbar,
 } from "@mui/material";
 import { updateTopic, getTopic } from "../../services/topicService";
 import { getClassLecturers } from "../../services/classService";
@@ -28,6 +29,9 @@ function EditTopic() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   useEffect(() => {
     if (!user) navigate("/login", { replace: true });
@@ -42,6 +46,9 @@ function EditTopic() {
         setTopic(data);
       } catch (error) {
         setError(error.message);
+        setSnackbarMessage(error.message);
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
       } finally {
         setLoading(false);
       }
@@ -60,6 +67,9 @@ function EditTopic() {
         setClassLecturers(data);
       } catch (error) {
         setError(error.message);
+        setSnackbarMessage(error.message);
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
       } finally {
         setLoading(false);
       }
@@ -80,13 +90,21 @@ function EditTopic() {
     setSuccess(null);
 
     if (!topic.name.trim()) {
-      setError("Vui lòng nhập tên đề tài.");
+      const errorMessage = "Vui lòng nhập tên đề tài.";
+      setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
       setLoading(false);
       return;
     }
 
     if (topic.max_members < 1) {
-      setError("Số lượng thành viên tối đa phải ít nhất là 1.");
+      const errorMessage = "Số lượng thành viên tối đa phải ít nhất là 1.";
+      setError(errorMessage);
+      setSnackbarMessage(errorMessage);
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
       setLoading(false);
       return;
     }
@@ -94,13 +112,24 @@ function EditTopic() {
     try {
       const { error: updateError } = await updateTopic({ ...topic });
       if (updateError) throw updateError;
-      setSuccess("Đề tài đã được cập nhật thành công.");
+      const successMessage = "Đề tài đã được cập nhật thành công.";
+      setSuccess(successMessage);
+      setSnackbarMessage(successMessage);
+      setSnackbarSeverity("success");
+      setSnackbarOpen(true);
       navigate(`/classes/${classId}`);
     } catch (error) {
       setError(error.message);
+      setSnackbarMessage(error.message);
+      setSnackbarSeverity("error");
+      setSnackbarOpen(true);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
   };
 
   if (loading) {
@@ -173,30 +202,32 @@ function EditTopic() {
                 variant="outlined"
               />
             </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel id="lecturer-label">
-                  Giảng viên hướng dẫn
-                </InputLabel>
-                <Select
-                  labelId="lecturer-label"
-                  label="Giảng viên hướng dẫn"
-                  name="lecturer_id"
-                  value={topic.lecturer_id}
-                  onChange={handleInputChange}
-                >
-                  {classLecturers &&
-                    classLecturers.map((classLecturer) => (
-                      <MenuItem
-                        key={classLecturer.lecturer_id}
-                        value={classLecturer.lecturer_id}
-                      >
-                        {classLecturer.lecturer.full_name}
-                      </MenuItem>
-                    ))}
-                </Select>
-              </FormControl>
-            </Grid>
+            {user.role === "admin" && (
+              <Grid item xs={12}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel id="lecturer-label">
+                    Giảng viên hướng dẫn
+                  </InputLabel>
+                  <Select
+                    labelId="lecturer-label"
+                    label="Giảng viên hướng dẫn"
+                    name="lecturer_id"
+                    value={topic.lecturer_id}
+                    onChange={handleInputChange}
+                  >
+                    {classLecturers &&
+                      classLecturers.map((classLecturer) => (
+                        <MenuItem
+                          key={classLecturer.lecturer_id}
+                          value={classLecturer.lecturer_id}
+                        >
+                          {classLecturer.lecturer.full_name}
+                        </MenuItem>
+                      ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+            )}
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -280,6 +311,19 @@ function EditTopic() {
           </Grid>
         </form>
       </Paper>
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbarSeverity}
+          sx={{ width: "100%" }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
