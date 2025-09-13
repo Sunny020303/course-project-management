@@ -1,70 +1,212 @@
-# Getting Started with Create React App
+<a name="readme-top"></a>
+<!-- PROJECT LOGO -->
+<div align="center">
+  
+  <h3 align="center">ỨNG DỤNG QUẢN LÝ DANH SÁCH CÁC ĐỀ TÀI MÔN HỌC CỦA KHOA</h3>
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+  <p align="center">
+    Đây là 1 ứng dụng web quản lý danh sách đề tài các môn học của khoa, sử dụng React và Supabase để xây dựng !
+    <br />
+    <a href="https://github.com/Sunny020303/course-project-management"><strong>Khám phá ứng dụng này »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/Sunny020303/course-project-management">Xem demo</a>
+    ·
+    <a href="https://github.com/Sunny020303/course-project-management">Báo lỗi</a>
+    ·
+    <a href="https://github.com/Sunny020303/course-project-management">Yêu cầu tính năng</a>
+  </p>
+</div>
 
-## Available Scripts
 
-In the project directory, you can run:
 
-### `npm start`
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Nội dung</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">Về ứng dụng này</a>
+      <ul>
+        <li><a href="#built-with">Xây dựng với</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#getting-started">Bắt đầu sử dụng</a>
+      <ul>
+        <li><a href="#installation">Cài đặt</a></li>
+      </ul>
+    </li>
+    <li><a href="#usage">Hướng dẫn sử dụng</a></li>
+    <li><a href="#contact">Liên hệ</a></li>
+    <li><a href="#acknowledgments">Nguồn tham khảo</a></li>
+  </ol>
+</details>
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
 
-### `npm test`
+<!-- ABOUT THE PROJECT -->
+<a name="about-the-project"></a>
+## Về ứng dụng này
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-### `npm run build`
+Ứng dụng được thực hiện với mục tiêu chính là tạo ra một nền tảng trực tuyến hiện đại, tiện lợi, và hiệu quả để hỗ trợ toàn diện cho quá trình quản lý các loại đề tài môn học, đồ án, dự án, sản phẩm, cũng như khóa luận tốt nghiệp và các hoạt động nghiên cứu khoa học trong khoa. Hệ thống hướng đến việc giải quyết các bất cập trong phương pháp quản lý truyền thống, đồng thời nâng cao chất lượng và hiệu quả của công tác đào tạo và nghiên cứu.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Dưới đây là mô tả chi tiết về các tính năng chính của ứng dụng:
+1. Tìm kiếm đăng ký đề tài (Sinh viên)
+    * Tìm kiếm đề tài:
+      * Sinh viên có thể tìm kiếm đề tài bằng tên.
+      * Chỉ hiển thị các đề tài đã được thực hiện của sinh viên đó hoặc các đề tài của lớp mà sinh viên tham gia.
+    * Đăng ký đề tài:
+      * Sinh viên đăng ký đề tài phù hợp với bản thân thông qua danh sách đề tài.
+      * Có thể mời các sinh viên khác cùng tham gia.
+2. Nộp kết quả đề tài và xem kết quả, nhận xét (Sinh viên)
+    * Nộp kết quả của đề tài đã đăng ký:
+      * Sinh viên nộp kết quả của đề tài mà mình đăng ký
+      * Kết quả bao gồm báo cáo đề tài, source code (nếu có hoặc link Git) và các tài liệu liên quan .
+    * Xem kết quả và nhận xét:
+      * Sinh viên có thể xem kết quả đánh giá của đề tài sau khi đề tài đã được đánh giá bởi giảng viên. tiết về đơn hàng của mình.
+3. Quản lý danh sách đề tài (Giảng viên)
+    * Giảng viên có thể xem thông tin các đề tài đã có.
+    * Thêm đề tài mới cho một môn học.
+    * Xóa, sửa các đề tài mà giảng viên đó quản lý.
+4. Đánh giá kết quả và hủy hết quả (Giảng viên)
+    * Đánh giá kết quả đề tài:
+      * Giảng viên xem kết quả của đề tài (báo cáo, source code, các tài liệu liên quan) và đánh giá kết quả của đề tài
+    * Hủy hết quả đánh giá:
+      * Giảng viên có thể hủy hết quả của một đề tài môn học nếu phát hiện đề tài đó vi phạm nội qui hoặc không phù hợp với xã hội.
+5. Duyệt đề tài đồ án/ khóa luận (Quản lý khoa/Admin)
+    * Quản lý khoa duyệt các đề tài trong danh sách đề tài được giảng viên gửi lên đối với một số môn học (Đồ án 1, 2, khóa luận tốt nghiệp,...).
+6. Quản lý hệ thống và phân quyền (Quản lý khoa/Admin)
+    * Quản lý khoa quản lý danh sách đề tài có trên hệ thống, kết quả đề tài.
+    * Quản lý các môn học của khoa.
+    * Quản lý tài khoản trong hệ thống, phân quyền cho các tài khoản trong hệ thống.
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-### `npm run eject`
+### Xây dựng với
+<a name="built-with"></a>
+### Frameworks và thư viện
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+<div align="center">
+<table>
+  <tr>
+    <td valign="middle" height="130"><img src="public/Review/JavaScript-logo.png" height="100"/></td>
+    <td valign="middle"><img src="public/Review/ReactLogo.png" height="100"/></td>
+    <td valign="middle"><img src="public/Review/MaterialUI.png" height="100"/></td>
+    <td valign="middle"><img src="public/Review/Supabase.png" height="50"/></td>
+  </tr>
+</table>
+</div>
+<p align="center"><i>Những công nghệ sử dụng</i></p>
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
 
-## Learn More
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+<!-- GETTING STARTED -->
+<a name="getting-started"></a>
+## Bắt đầu sử dụng
+Hướng dẫn cách cài đặt dự án về máy. Để có một bản sao ứng dụng có thể chạy được, làm theo những bước đơn giản sau đây:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Cài đặt
+<a name="installation"></a>
+Để có thể chạy được ứng dụng, yêu cầu cài đặt những thứ sau:
+* <a href="https://nodejs.org/en/download">Nodejs</a> và  <a href="https://code.visualstudio.com/download">Visual Studio Code</a>, để chạy mã nguồn
 
-### Code Splitting
+1. Đầu tiên, hãy clone dự án này về máy và mở bằng Visual Studio Code
+2. Mở terminal và chạy lệnh 'npm install' để download các node_modules cần thiết
+3. Chạy lệnh npm start để bắt đầu ứng dụng ở port 3000 và mở [http://localhost:3000](http://localhost:3000) trong trình duyệt
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
 
-### Analyzing the Bundle Size
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+<!-- USAGE EXAMPLES -->
+## Hướng dẫn sử dụng
+<a name="usage"></a>
+Có 9 màn hình chính, đăng nhập, đăng ký, danh sách lớp, danh sách đề tài của lớp học, thông tin đề tài, danh sách đề tài phê duyệt, thêm và quản lý nhóm, tài khoản, quản lý hệ thống.
+1. Màn hình đăng nhập và đăng ký
+   * Sử dụng tài khoản, mật khẩu đã được cung cấp để đăng nhập, có thể là admin, giảng viên hoặc sinh viên. 
+   <img src="public/Review/Login.png"/>
+   <p align="center"><i>Màn hình đăng nhập</i></p>
+   
+   * Chỉ có Admin mới có thể tạo tài khoản mới và cấp cho giảng viên và sinh viên (theo bussiness rule). 
+   <img src="public/Review/Register.png"/>
+   <p align="center"><i>Màn hình đăng ký</i></p>
+   
+2. Màn hình danh sách lớp
+   * Màn hình này hiển thị danh sách các lớp học, hiển thị tất cả lớp học cho người dùng  admin,chỉ hiển thị các lớp học có sự tham gia của giảng viên hoặc sinh viên
+     
+   <img src="public/Review/Classes.png"/>
+   <p align="center"><i>Giao diện danh sách các lớp</i></p>
+   
+3. Màn hình danh sách đề tài của lớp học
+   * Màn hình này hiển thị danh sách các đề tài hiện có trong lớp học đó cùng trạng thái của đề tài 
+   <img src="public/Review/Class.png"/>
+   <p align="center"><i>Giao diện danh sách đề tài</i></p>
+   
+4. Màn hình thông tin đề tài
+   * Màn hình này hiển thị thông tin của đề tài được chọn
+   <img src="public/Review/TopicInfo.png"/>
+   <p align="center"><i>Giao diện thông tin đề tài</i></p>
+   
+5. Màn hình thêm và quản lý nhóm
+   * Tạo nhóm mới và quản lý thành viên nhóm.
+   <img src="public/Review/GroupManagement.png"/>
+   <p align="center"><i>Giao diện thêm và quản lý nhóm</i></p>
 
-### Making a Progressive Web App
+   * Thông tin nhóm.
+   <img src="public/Review/GroupInfo.png"/>
+   <p align="center"><i>Giao diện xem thông tin nhóm</i></p>
+   
+6. Màn hình danh sách đề tài phê duyệt
+   * Phê duyệt các đề tài
+   <img src="public/Review/TopicList.png"/>
+   <p align="center"><i>Giao diện phê duyệt đề tài</i></p>
+   
+7. Màn hình tài khoản
+   * Quản lý tài khoản cá nhân, xem thông tin, danh sách các lớp tham gia, chỉnh sửa thông tin tài khoản
+   <img src="public/Review/Profile.png"/>
+   <p align="center"><i>Giao diện quản lý tài khoản</i></p>
+   
+   <img src="public/Review/EditProfile.png"/>
+   <p align="center"><i>Giao diện quản lý tài khoản</i></p>
+     
+8. Các màn hình quản lý
+   * Quản lý danh sách tài khoản của các admin, giảng viên, sinh viên trong hệ thống
+   <img src="public/Review/AccountList.png"/>
+   <p align="center"><i>Giao diện quản lý danh sách tài khoản</i></p>
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+   * Quản lý danh sách lớp có trong hệ thống
+   <img src="public/Review/ClassList.png"/>
+   <p align="center"><i>Giao diện quản lý danh sách lớp</i></p>
 
-### Advanced Configuration
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+<!-- CONTACT -->
+## Liên hệ
+<a name="contact"></a>
+* Nguyễn Quốc Thái Dương - [Facebook](https://www.facebook.com/profile.php?id=100010982231797) - 21520758@gm.uit.edu.vn
+* Phạm Bá Hoàng - [Facebook](https://www.facebook.com/kv7r2) - 21520872@gm.uit.edu.vn
 
-### Deployment
+Project Link: [course-project-management](https://github.com/Sunny020303/course-project-management)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-### `npm run build` fails to minify
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+<!-- ACKNOWLEDGMENTS -->
+## Nguồn tài liệu tham khảo
+<a name="acknowledgments"></a>
+Đây là những nguồn tài liệu nhóm chúng mình đã sử dụng để có thể thực hiện được đồ án này!
+
+* [Node.js](https://nodejs.org/en)
+* [React](https://react.dev/)
+* [MUI: The React component library](https://mui.com/)
+* [Supabase | The Open Source Firebase Alternative](https://supabase.com/)
+* [React Tutorial by W3School](https://www.w3schools.com/react/default.asp)
+* [JavaScript Tutorial by W3School](https://www.w3schools.com/js/default.asp)
+
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
