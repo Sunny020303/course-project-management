@@ -123,7 +123,9 @@ Truy cập bản [live demo trên Vercel](https://course-project-management.verc
 ### Tài khoản demo
 <a name="demo-account"></a>
 Nhằm phục vụ mục đích demo, sử dụng thông tin tài khoản dưới đây để đăng nhập vào ứng dụng:
+
 Email: 2af185eb5a4241fea4506ce25e20b43e@gmail.com
+
 Password: password123
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
