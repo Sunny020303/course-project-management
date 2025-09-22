@@ -7,10 +7,10 @@
   <p align="center">
     Đây là 1 ứng dụng web quản lý danh sách đề tài các môn học của khoa, sử dụng React và Supabase để xây dựng !
     <br />
-    <a href="https://github.com/Sunny020303/course-project-management"><strong>Khám phá ứng dụng này »</strong></a>
+    <a href="https://course-project-management.vercel.app"><strong>Khám phá ứng dụng này »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/Sunny020303/course-project-management">Xem demo</a>
+    <a href="https://drive.google.com/drive/folders/11HVAlp9b0KX8AYeZvBonFd9Rz5hEU-2L">Xem demo</a>
     ·
     <a href="https://github.com/Sunny020303/course-project-management">Báo lỗi</a>
     ·
@@ -108,7 +108,7 @@ Dưới đây là mô tả chi tiết về các tính năng chính của ứng d
 <!-- GETTING STARTED -->
 <a name="getting-started"></a>
 ## Bắt đầu sử dụng
-Hướng dẫn cách cài đặt dự án về máy. Để có một bản sao ứng dụng có thể chạy được, làm theo những bước đơn giản sau đây:
+Truy cập bản [live demo trên Vercel](https://course-project-management.vercel.app) để trải nghiệm ứng dụng. Dưới đây là hướng dẫn build từ source cho người có nhu cầu:
 
 ### Cài đặt
 <a name="installation"></a>
